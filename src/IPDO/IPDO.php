@@ -10,17 +10,21 @@ use PDO;
 
 use function \str_contains;
 use function replaceDoubleSpace;
+use function integer;
 use function isInt;
 use function isMultidimensional;
-use function CollectDataException;
-use function writeLog;
 
-class IPDO
+abstract class IPDO
 {
-   protected string $host     = 'localhost';
-   protected string $name_db  = 'inilim';
-   protected string $login    = 'root';
-   protected string $password = '';
+   const FETCH_ALL            = 2;
+   const FETCH_ONCE           = 1;
+   const FETCH_IPDO_RESULT    = 0;
+   protected const LEN_SQL    = 500;
+
+   protected string $host;
+   protected string $name_db;
+   protected string $login;
+   protected string $password;
    /**
     * Соединение с БД PDO
     */
@@ -38,21 +42,6 @@ class IPDO
     */
    protected int $count_touch    = 0;
    protected int $last_insert_id = -1;
-   protected const LEN_SQL = 500;
-
-   const FETCH_ALL           = 2;
-   const FETCH_ONCE          = 1;
-   const FETCH_IPDO_RESULT   = 0;
-
-   protected static ?self $obj = null;
-
-   // ---------------------------------------------
-   // ---------------------------------------------
-   // ---------------------------------------------
-   // public static
-   // ---------------------------------------------
-   // ---------------------------------------------
-   // ---------------------------------------------
 
    /**
     * выполнить запрос
@@ -60,102 +49,95 @@ class IPDO
     * @param int $fetch 0 вернуть IPDOResult, 1 вытащить один результат, 2 вытащить все.
     * @return @return IPDOResult|list<array<string,array<string,string|null|int|float>>>|array<string,string|null|int|float>|array{}
     */
-   public static function exec(
+   public function exec(
       string $sql_query,
       array|int $values = [],
       int $fetch        = self::FETCH_IPDO_RESULT
    ): array|IPDOResult {
-      if (!self::isInit()) self::init();
       if (is_int($values)) {
          $fetch  = $values;
          $values = [];
       }
-      return self::$obj->run($sql_query, $values, $fetch);
+      return $this->run($sql_query, $values, $fetch);
    }
 
    /**
     * получить статус последнего запроса. В случаи отсутствия запроса выдаст false
     */
-   public static function status(): bool
+   public function status(): bool
    {
-      if (!self::isInit()) return false;
-      return self::$obj->last_status;
+      if (!$this->hasConnect()) return false;
+      return $this->last_status;
    }
 
    /**
     * закрыть соединение с базой
     */
-   public static function close(): void
+   public function close(): void
    {
-      if (!self::isInit()) return;
-      self::$obj->closeConnect();
+      $this->connect = null;
    }
 
    /**
     * возвращает количество задейственных строк последнего запроса. Запросы типа SELECT тоже считаются!
     */
-   public static function involved(): int
+   public function involved(): int
    {
-      if (!self::isInit()) return -1;
-      return self::$obj->count_touch;
+      if (!$this->hasConnect()) return -1;
+      return $this->count_touch;
    }
 
    /**
     * получить автоинкремент. в противном случаи вернет -1
     */
-   public static function getLastInsert(): int
+   public function getLastInsert(): int
    {
-      if (!self::isInit()) return -1;
-      return self::$obj->last_insert_id;
+      if (!$this->hasConnect()) return -1;
+      return $this->last_insert_id;
    }
 
-   public static function init(): void
+   public function connect(): void
    {
-      if (!is_null(self::$obj)) return;
-      self::$obj = new self();
-      self::$obj->connectDB();
+      if (is_null($this->connect)) $this->connectDB();
    }
 
-   public static function isInit(): bool
+   public function hasConnect(): bool
    {
-      return !is_null(self::$obj);
+      return !is_null($this->connect);
    }
 
    /**
-    * активируем транзакцию, если мы повторно активируем транзакцию будет вызван rollBack
+    * активируем транзакцию, если мы повторно активируем транзакцию выдаст false
     */
-   public static function begin(): bool
+   public function begin(): bool
    {
-      if (!self::isInit()) return false;
-      if (is_null(self::$obj->connect)) return false;
-      if (self::$obj->connect->inTransaction()) {
-         self::$obj->connect->rollBack();
+      if (!$this->hasConnect()) return false;
+      if ($this->connect->inTransaction()) {
          return false;
       }
-      self::$obj->connect->beginTransaction();
+      $this->connect->beginTransaction();
       return true;
    }
 
-   public static function rollBack(): void
+   public function rollBack(): void
    {
-      if (self::inTransaction()) {
-         self::$obj->connect->rollBack();
+      if ($this->inTransaction()) {
+         $this->connect->rollBack();
       }
    }
 
-   public static function commit(): bool
+   public function commit(): bool
    {
-      if (self::inTransaction()) {
-         return self::$obj->connect->commit();
+      if ($this->inTransaction()) {
+         return $this->connect->commit();
       }
       return false;
    }
 
-   public static function inTransaction(): bool
+   public function inTransaction(): bool
    {
-      if (!self::isInit()) return false;
-      if (is_null(self::$obj->connect)) return false;
-      return self::$obj->connect->inTransaction();
+      if (!$this->hasConnect()) return false;
+      return $this->connect->inTransaction();
    }
 
    // ---------------------------------------------
@@ -165,11 +147,6 @@ class IPDO
    // ---------------------------------------------
    // ---------------------------------------------
    // ---------------------------------------------
-
-   protected function closeConnect(): void
-   {
-      $this->connect = null;
-   }
 
    /**
     * @param array<string,mixed> $values
@@ -257,26 +234,8 @@ class IPDO
       return $this->defineResult($stm);
    }
 
-   /**
-    * В момент создания PDO может выбросить исключение PDOException
-    * @throws PDOException
-    */
    protected function connectDB(): void
    {
-      if (!is_null($this->connect)) return;
-
-      $this->count_connect++;
-      $this->connect = new PDO(
-         'mysql:dbname=' . $this->name_db .
-            ';host=' . $this->host,
-         $this->login,
-         $this->password,
-         [
-            PDO::MYSQL_ATTR_FOUND_ROWS => true,
-            // PDO::ATTR_EMULATE_PREPARES => false,
-         ]
-      );
-      $this->connect->exec('SET NAMES utf8mb4');
    }
 
    /**
