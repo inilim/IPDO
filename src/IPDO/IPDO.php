@@ -5,6 +5,7 @@ namespace Inilim\IPDO;
 use Inilim\IPDO\Exception\IPDOException;
 use Inilim\IPDO\Exception\FailedExecuteException;
 use Inilim\IPDO\IPDOResult;
+use Inilim\Integer;
 use PDOStatement;
 use PDO;
 

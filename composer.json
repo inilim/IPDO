@@ -1,8 +1,8 @@
 {
-    "name": "inilim/IPDO",
+    "name": "inilim/ipdo",
     "description": "IPDO",
     "type": "library",
-    "license": "Free",
+    "license": "MIT",
     "autoload": {
         "psr-4": {
             "Inilim\\": "src/"
@@ -15,7 +15,8 @@
     ],
     "minimum-stability": "dev",
     "require": {
-        "php": "^8.2"
+        "php": "^8.2",
+        "inilim/integer": "dev-main"
     },
     "require-dev": {
         "phpstan/phpstan": "@stable"
