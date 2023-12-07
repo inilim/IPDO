@@ -5,14 +5,27 @@ namespace Inilim\IPDO;
 use Inilim\IPDO\Exception\IPDOException;
 use Inilim\IPDO\Exception\FailedExecuteException;
 use Inilim\IPDO\IPDOResult;
-use Inilim\Integer;
+use Inilim\Integer\Integer;
 use PDOStatement;
 use PDO;
 
 use function \str_contains;
-use function replaceDoubleSpace;
-use function integer;
-use function isInt;
+use function \is_int;
+use function \is_bool;
+use function \preg_match_all;
+use function \sizeof;
+use function \array_flip;
+use function \array_intersect_key;
+use function \mt_rand;
+use function \is_array;
+use function \array_map;
+use function \is_null;
+use function \strval;
+use function \intval;
+use function \str_replace;
+use function \preg_replace;
+use function \strlen;
+use function \substr;
 use function isMultidimensional;
 
 abstract class IPDO
@@ -29,7 +42,8 @@ abstract class IPDO
    /**
     * Соединение с БД PDO
     */
-   protected ?PDO $connect = null;
+   protected ?PDO $connect     = null;
+   protected ?Integer $integer = null;
    /**
     * статус последнего запроса
     */
@@ -148,6 +162,17 @@ abstract class IPDO
    // ---------------------------------------------
    // ---------------------------------------------
    // ---------------------------------------------
+
+   protected function defineInteger(): Integer
+   {
+      return $this->integer = new Integer;
+   }
+
+   protected function getInteger(): Integer
+   {
+      if (!is_null($this->integer)) return $this->integer;
+      return $this->defineInteger();
+   }
 
    /**
     * @param array<string,mixed> $values
@@ -296,7 +321,7 @@ abstract class IPDO
       // &$val требование от bindParam https://www.php.net/manual/ru/pdostatement.bindparam.php#98145
       foreach ($values as $key => &$val) {
          $mask = ':' . $key;
-         if (integer()->isIntPHP($val)) {
+         if ($this->getInteger()->isIntPHP($val)) {
             $val = intval($val);
             $stm->bindParam($mask, $val, PDO::PARAM_INT);
          } elseif (is_null($val)) {
@@ -323,7 +348,7 @@ abstract class IPDO
    protected function getLastInsertID(): int
    {
       $id = $this->connect->lastInsertId();
-      if (isInt($id)) return intval($id);
+      if ($this->getInteger()->isNumeric($id)) return intval($id);
       // lastInsertId может вернуть строку, представляющую последнее значение
       return -1;
    }
@@ -334,7 +359,7 @@ abstract class IPDO
    protected function shortQuery(string &$sql): string
    {
       $sql = str_replace(["\n", "\r", "\r\n", "\t"], ' ', $sql);
-      $sql = replaceDoubleSpace($sql);
+      $sql = preg_replace('#\s{2,}#', ' ', $sql) ?? '';
       if (strlen($sql) > self::LEN_SQL) return substr($sql, 0, self::LEN_SQL) . '...';
       return $sql;
    }
