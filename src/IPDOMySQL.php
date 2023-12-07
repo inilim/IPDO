@@ -17,7 +17,7 @@ class IPDOMySQL extends IPDO
 
    /**
     * В момент создания PDO может выбросить исключение PDOException
-    * @throws PDOException
+    * @throws \PDOException
     */
    protected function connectDB(): void
    {

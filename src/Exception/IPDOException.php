@@ -8,7 +8,7 @@ class IPDOException extends Exception
 {
    protected array $errors;
 
-   public function __construct(array|string $any)
+   public function __construct(array|string|int|float $any)
    {
       $this->errors = is_array($any) ? $any : [$any];
    }
