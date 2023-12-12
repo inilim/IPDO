@@ -42,8 +42,8 @@ abstract class IPDO
    /**
     * Соединение с БД PDO
     */
-   protected ?PDO $connect     = null;
-   protected ?Integer $integer = null;
+   protected ?PDO $connect = null;
+   protected Integer $integer;
    /**
     * статус последнего запроса
     */
@@ -163,15 +163,9 @@ abstract class IPDO
    // ---------------------------------------------
    // ---------------------------------------------
 
-   protected function defineInteger(): Integer
-   {
-      return $this->integer = new Integer;
-   }
-
    protected function getInteger(): Integer
    {
-      if (!is_null($this->integer)) return $this->integer;
-      return $this->defineInteger();
+      return $this->integer;
    }
 
    /**

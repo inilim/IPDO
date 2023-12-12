@@ -3,21 +3,24 @@
 namespace Inilim\IPDO;
 
 use Inilim\IPDO\IPDO;
+use Inilim\Integer\Integer;
 use PDO;
+use PDOException;
 
 class IPDOMySQL extends IPDO
 {
-   public function __construct(string $name_db, string $login, string $password, string $host = 'localhost')
+   public function __construct(string $name_db, string $login, string $password, Integer $integer, string $host = 'localhost')
    {
       $this->name_db  = $name_db;
       $this->login    = $login;
       $this->password = $password;
+      $this->integer  = $integer;
       $this->host     = $host;
    }
 
    /**
     * В момент создания PDO может выбросить исключение PDOException
-    * @throws \PDOException
+    * @throws PDOException
     */
    protected function connectDB(): void
    {

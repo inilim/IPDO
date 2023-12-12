@@ -4,20 +4,24 @@ namespace Inilim\IPDO;
 
 use Inilim\IPDO\IPDO;
 use Inilim\IPDO\Exception\SQLiteNotFoundFileException;
+use Inilim\Integer\Integer;
 use PDO;
+use PDOException;
 
 class IPDOSQLite extends IPDO
 {
    /**
     * @param string $path_to_file "path/to/file" OR ":memory:"
     */
-   public function __construct(string $path_to_file)
+   public function __construct(string $path_to_file, Integer $integer)
    {
       $this->name_db = $path_to_file;
+      $this->integer  = $integer;
    }
 
    /**
     * В момент создания PDO может выбросить исключение PDOException
+    * @throws SQLiteNotFoundFileException
     * @throws PDOException
     */
    protected function connectDB(): void
