@@ -4,17 +4,19 @@ namespace Inilim\IPDO;
 
 use Inilim\IPDO\IPDO;
 use Inilim\Integer\Integer;
+use Inilim\Array\Array_;
 use PDO;
 use PDOException;
 
 class IPDOMySQL extends IPDO
 {
-   public function __construct(string $name_db, string $login, string $password, Integer $integer, string $host = 'localhost')
+   public function __construct(string $name_db, string $login, string $password, Integer $integer, Array_ $array, string $host = 'localhost')
    {
       $this->name_db  = $name_db;
       $this->login    = $login;
       $this->password = $password;
       $this->integer  = $integer;
+      $this->array    = $array;
       $this->host     = $host;
    }
 

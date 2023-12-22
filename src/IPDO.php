@@ -6,27 +6,9 @@ use Inilim\IPDO\Exception\IPDOException;
 use Inilim\IPDO\Exception\FailedExecuteException;
 use Inilim\IPDO\IPDOResult;
 use Inilim\Integer\Integer;
+use Inilim\Array\Array_;
 use PDOStatement;
 use PDO;
-
-use function \str_contains;
-use function \is_int;
-use function \is_bool;
-use function \preg_match_all;
-use function \sizeof;
-use function \array_flip;
-use function \array_intersect_key;
-use function \mt_rand;
-use function \is_array;
-use function \array_map;
-use function \is_null;
-use function \strval;
-use function \intval;
-use function \str_replace;
-use function \preg_replace;
-use function \strlen;
-use function \substr;
-use function isMultidimensional;
 
 abstract class IPDO
 {
@@ -44,6 +26,7 @@ abstract class IPDO
     */
    protected ?PDO $connect = null;
    protected Integer $integer;
+   protected Array_ $array;
    /**
     * статус последнего запроса
     */
@@ -168,6 +151,11 @@ abstract class IPDO
       return $this->integer;
    }
 
+   protected function getArray(): Array_
+   {
+      return $this->array;
+   }
+
    /**
     * @param array<string,mixed> $values
     * @return IPDOResult|list<array<string,array<string,string|null|int|float>>>|array<string,string|null|int|float>|array{}
@@ -286,7 +274,7 @@ abstract class IPDO
       $num = mt_rand(1000, 9999);
       foreach ($values as $key_val => $val) {
          if (!is_array($val)) continue;
-         if (isMultidimensional($val)) throw new IPDOException([
+         if ($this->getArray()->isMultidimensional($val)) throw new IPDOException([
             $key_val . ': многомерный массив.',
             $val,
          ]);

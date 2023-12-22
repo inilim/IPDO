@@ -5,6 +5,7 @@ namespace Inilim\IPDO;
 use Inilim\IPDO\IPDO;
 use Inilim\IPDO\Exception\SQLiteNotFoundFileException;
 use Inilim\Integer\Integer;
+use Inilim\Array\Array_;
 use PDO;
 use PDOException;
 
@@ -13,10 +14,11 @@ class IPDOSQLite extends IPDO
    /**
     * @param string $path_to_file "path/to/file" OR ":memory:"
     */
-   public function __construct(string $path_to_file, Integer $integer)
+   public function __construct(string $path_to_file, Integer $integer, Array_ $array)
    {
       $this->name_db = $path_to_file;
-      $this->integer  = $integer;
+      $this->integer = $integer;
+      $this->array   = $array;
    }
 
    /**
