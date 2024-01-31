@@ -28,10 +28,10 @@ class IPDOSQLite extends IPDO
     */
    protected function connectDB(): void
    {
-      if (!is_null($this->connect)) return;
+      if ($this->connect !== null) return;
 
-      if ($this->name_db !== ':memory:' && !is_file($this->name_db)) {
-         throw new SQLiteNotFoundFileException(sprintf('File not found "%s"', $this->name_db));
+      if ($this->name_db !== ':memory:' && !\is_file($this->name_db)) {
+         throw new SQLiteNotFoundFileException(\sprintf('File not found "%s"', $this->name_db));
       }
 
       $this->count_connect++;

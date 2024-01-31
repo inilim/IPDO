@@ -26,7 +26,7 @@ class IPDOMySQL extends IPDO
     */
    protected function connectDB(): void
    {
-      if (!is_null($this->connect)) return;
+      if ($this->connect !== null) return;
 
       $this->count_connect++;
       $this->connect = new PDO(

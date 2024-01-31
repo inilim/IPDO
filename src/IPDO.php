@@ -52,7 +52,7 @@ abstract class IPDO
       array|int $values = [],
       int $fetch        = self::FETCH_IPDO_RESULT
    ): array|IPDOResult {
-      if (is_int($values)) {
+      if (\is_int($values)) {
          $fetch  = $values;
          $values = [];
       }
@@ -96,12 +96,12 @@ abstract class IPDO
 
    public function connect(): void
    {
-      if (is_null($this->connect)) $this->connectDB();
+      if ($this->connect === null) $this->connectDB();
    }
 
    public function hasConnect(): bool
    {
-      return !is_null($this->connect);
+      return $this->connect !== null;
    }
 
    /**
@@ -179,11 +179,11 @@ abstract class IPDO
    {
       if ($fetch === self::FETCH_ONCE) {
          $list = $result->getStatement()->fetch(PDO::FETCH_ASSOC);
-         return !is_array($list) ? [] : $list;
+         return !\is_array($list) ? [] : $list;
       }
       if ($fetch === self::FETCH_ALL) {
          $list = $result->getStatement()->fetchAll(PDO::FETCH_ASSOC);
-         return !is_array($list) ? [] : $list;
+         return !\is_array($list) ? [] : $list;
       }
 
       return $result;
@@ -215,7 +215,7 @@ abstract class IPDO
    {
       $this->connectDB();
 
-      if (is_null($this->connect)) throw new IPDOException('IPDO::connectDB property "connect" is null');
+      if ($this->connect === null) throw new IPDOException('IPDO::connectDB property "connect" is null');
 
       // IN OR NOT IN (:item,:item,:item)
       $sql = $this->convertList($values, $sql);
@@ -225,7 +225,7 @@ abstract class IPDO
       // подготовка запроса
       $stm = $this->connect->prepare($sql);
 
-      if (is_bool($stm)) throw new IPDOException([
+      if (\is_bool($stm)) throw new IPDOException([
          'PDO::prepare return false',
          $this->connect->errorInfo(),
       ]);
@@ -253,14 +253,14 @@ abstract class IPDO
     */
    protected function removeUnwantedKeys(array &$values, string $sql): array
    {
-      if (!str_contains($sql, ':')) return [];
+      if (!\str_contains($sql, ':')) return [];
       $masks = [];
-      preg_match_all('#\:[a-z\_A-Z0-9]+#', $sql, $masks);
+      \preg_match_all('#\:[a-z\_A-Z0-9]+#', $sql, $masks);
       $masks = $masks[0] ?? [];
-      if (!sizeof($masks)) return $masks;
-      $masks      = array_map(fn ($m) => trim($m, ':'), $masks);
-      $masks_keys = array_flip($masks);
-      $values     = array_intersect_key($values, $masks_keys);
+      if (!$masks) return $masks;
+      $masks      = \array_map(fn ($m) => \trim($m, ':'), $masks);
+      $masks_keys = \array_flip($masks);
+      $values     = \array_intersect_key($values, $masks_keys);
       return $masks;
    }
 
@@ -271,22 +271,27 @@ abstract class IPDO
    protected function convertList(array &$values, string &$sql): string
    {
       $mark = 'in_item_';
-      $num = mt_rand(1000, 9999);
+      $num = \mt_rand(1000, 9999);
       foreach ($values as $key_val => $val) {
-         if (!is_array($val)) continue;
+         if (!\is_array($val)) continue;
          if ($this->getArray()->isMultidimensional($val)) throw new IPDOException([
             $key_val . ': многомерный массив.',
             $val,
          ]);
 
-         $mark_keys = array_map(function ($val_item) use (&$values, $mark, &$num) {
+         $mark_keys = \array_map(function ($val_item) use (&$values, $mark, &$num) {
             $new_key = $mark . $num;
             $values[$new_key] = $val_item;
             $num++;
             return ':' . $new_key;
          }, $val);
 
-         $sql = str_replace(':' . $key_val, implode(',', $mark_keys), $sql);
+         // $sql = str_replace(':' . $key_val, implode(',', $mark_keys), $sql);
+         $sql = \preg_replace(
+            '#\([\s\t]*\:' . \preg_quote($key_val) . '[\s\t]*\)#',
+            '(' . \implode(',', $mark_keys) . ')',
+            $sql
+         );
          unset($values[$key_val]);
       }
 
@@ -304,12 +309,12 @@ abstract class IPDO
       foreach ($values as $key => &$val) {
          $mask = ':' . $key;
          if ($this->getInteger()->isIntPHP($val)) {
-            $val = intval($val);
+            $val = \intval($val);
             $stm->bindParam($mask, $val, PDO::PARAM_INT);
-         } elseif (is_null($val)) {
+         } elseif ($val === null) {
             $stm->bindParam($mask, $val, PDO::PARAM_NULL);
          } else {
-            $val = strval($val);
+            $val = \strval($val);
             $stm->bindParam($mask, $val, PDO::PARAM_STR);
          }
       }
@@ -330,7 +335,7 @@ abstract class IPDO
    protected function getLastInsertID(): int
    {
       $id = $this->connect->lastInsertId();
-      if ($this->getInteger()->isNumeric($id)) return intval($id);
+      if ($this->getInteger()->isNumeric($id)) return \intval($id);
       // lastInsertId может вернуть строку, представляющую последнее значение
       return -1;
    }
@@ -340,9 +345,9 @@ abstract class IPDO
     */
    protected function shortQuery(string &$sql): string
    {
-      $sql = str_replace(["\n", "\r", "\r\n", "\t"], ' ', $sql);
-      $sql = preg_replace('#\s{2,}#', ' ', $sql) ?? '';
-      if (strlen($sql) > self::LEN_SQL) return substr($sql, 0, self::LEN_SQL) . '...';
+      $sql = \str_replace(["\n", "\r", "\r\n", "\t"], ' ', $sql);
+      $sql = \preg_replace('#\s{2,}#', ' ', $sql) ?? '';
+      if (\strlen($sql) > self::LEN_SQL) return \substr($sql, 0, self::LEN_SQL) . '...';
       return $sql;
    }
 }
