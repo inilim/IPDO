@@ -242,9 +242,7 @@ abstract class IPDO
       return $this->defineResult($stm);
    }
 
-   protected function connectDB(): void
-   {
-   }
+   abstract protected function connectDB(): void;
 
    /**
     * удаляем ненужные ключи из массива $values
