@@ -21,6 +21,7 @@ abstract class IPDO
    protected string $name_db;
    protected string $login;
    protected string $password;
+   protected array $options;
    /**
     * Соединение с БД PDO
     */

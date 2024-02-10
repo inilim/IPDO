@@ -14,11 +14,12 @@ class IPDOSQLite extends IPDO
    /**
     * @param string $path_to_file "path/to/file" OR ":memory:"
     */
-   public function __construct(string $path_to_file, Integer $integer, Array_ $array)
+   public function __construct(string $path_to_file, Integer $integer, Array_ $array, array $options = [])
    {
       $this->name_db = $path_to_file;
       $this->integer = $integer;
       $this->array   = $array;
+      $this->options  = $options;
    }
 
    /**
@@ -36,7 +37,8 @@ class IPDOSQLite extends IPDO
 
       $this->count_connect++;
       $this->connect = new PDO(
-         'sqlite:' . $this->name_db
+         dsn: 'sqlite:' . $this->name_db,
+         options: $this->options
       );
    }
 }
