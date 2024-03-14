@@ -13,6 +13,7 @@
             "name": "inilim"
         }
     ],
+    "minimum-stability": "stable",
     "require": {
         "php": "^8.2",
         "inilim/integer": "dev-main",
