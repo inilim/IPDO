@@ -26,8 +26,8 @@ abstract class IPDO
     * Соединение с БД PDO
     */
    protected ?PDO $connect = null;
-   protected Integer $integer;
-   protected Array_ $array;
+   protected readonly Integer $integer;
+   protected readonly Array_ $array;
    /**
     * статус последнего запроса
     */
@@ -147,16 +147,6 @@ abstract class IPDO
    // ---------------------------------------------
    // ---------------------------------------------
 
-   protected function getInteger(): Integer
-   {
-      return $this->integer;
-   }
-
-   protected function getArray(): Array_
-   {
-      return $this->array;
-   }
-
    /**
     * @param array<string,mixed> $values
     * @return IPDOResult|list<array<string,array<string,string|null|int|float>>>|array<string,string|null|int|float>|array{}
@@ -273,7 +263,7 @@ abstract class IPDO
       $num = \mt_rand(1000, 9999);
       foreach ($values as $key_val => $val) {
          if (!\is_array($val)) continue;
-         if ($this->getArray()->isMultidimensional($val)) throw new IPDOException([
+         if ($this->array->isMultidimensional($val)) throw new IPDOException([
             $key_val . ': многомерный массив.',
             $val,
          ]);
@@ -307,7 +297,7 @@ abstract class IPDO
       // &$val требование от bindParam https://www.php.net/manual/ru/pdostatement.bindparam.php#98145
       foreach ($values as $key => &$val) {
          $mask = ':' . $key;
-         if ($this->getInteger()->isIntPHP($val)) {
+         if ($this->integer->isIntPHP($val)) {
             $val = \intval($val);
             $stm->bindParam($mask, $val, PDO::PARAM_INT);
          } elseif ($val === null) {
@@ -334,7 +324,7 @@ abstract class IPDO
    protected function getLastInsertID(): int
    {
       $id = $this->connect->lastInsertId();
-      if ($this->getInteger()->isNumeric($id)) return \intval($id);
+      if ($this->integer->isNumeric($id)) return \intval($id);
       // lastInsertId может вернуть строку, представляющую последнее значение
       return -1;
    }
