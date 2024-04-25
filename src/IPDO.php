@@ -26,8 +26,8 @@ abstract class IPDO
     * Соединение с БД PDO
     */
    protected ?PDO $connect = null;
-   protected readonly Integer $integer;
-   protected readonly Array_ $array;
+   protected Integer $integer;
+   protected Array_ $array;
    /**
     * статус последнего запроса
     */
