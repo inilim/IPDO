@@ -216,19 +216,27 @@ abstract class IPDO
       // подготовка запроса
       $stm = $this->connect->prepare($sql);
 
-      if (\is_bool($stm)) throw new IPDOException([
-         'PDO::prepare return false',
-         $this->connect->errorInfo(),
-      ]);
+      if (\is_bool($stm)) {
+         $e = new IPDOException('PDO::prepare return false');
+         $e->setError([
+            $e->getMessage(),
+            $this->connect->errorInfo(),
+         ]);
+         throw $e;
+      }
 
       // Устанавливаем параметры к запросу
       $this->setBindParams($stm, $values);
 
       // выполнить запрос
-      if (!$stm->execute()) throw new IPDOException([
-         'PDOStatement::execute return false',
-         $stm->errorInfo(),
-      ]);
+      if (!$stm->execute()) {
+         $e = new IPDOException('PDOStatement::execute return false');
+         $e->setError([
+            $e->getMessage(),
+            $stm->errorInfo(),
+         ]);
+         throw $e;
+      }
 
       return $this->defineResult($stm);
    }
@@ -263,10 +271,15 @@ abstract class IPDO
       $num = \mt_rand(1000, 9999);
       foreach ($values as $key_val => $val) {
          if (!\is_array($val)) continue;
-         if ($this->array->isMultidimensional($val)) throw new IPDOException([
-            $key_val . ': многомерный массив.',
-            $val,
-         ]);
+
+         if ($this->array->isMultidimensional($val)) {
+            $e = new IPDOException($key_val . ': многомерный массив.');
+            $e->setError([
+               $e->getMessage(),
+               $val,
+            ]);
+            throw $e;
+         }
 
          $mark_keys = \array_map(function ($val_item) use (&$values, $mark, &$num) {
             $new_key = $mark . $num;

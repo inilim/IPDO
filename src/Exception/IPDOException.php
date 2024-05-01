@@ -6,14 +6,23 @@ use \Exception;
 
 class IPDOException extends Exception
 {
-   protected array $errors;
+   /**
+    * @var array
+    */
+   protected $errors;
 
-   public function __construct(array|string|int|float $any)
+   /**
+    * @param mixed $any
+    */
+   public function setError($any)
    {
       $this->errors = \is_array($any) ? $any : [$any];
    }
 
-   public function getErrors(): array
+   /**
+    * @return array
+    */
+   public function getError()
    {
       return $this->errors;
    }

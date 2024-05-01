@@ -19,7 +19,7 @@ class IPDOSQLite extends IPDO
       $this->name_db = $path_to_file;
       $this->integer = $integer;
       $this->array   = $array;
-      $this->options  = $options;
+      $this->options = $options;
    }
 
    /**

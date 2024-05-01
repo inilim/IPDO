@@ -8,10 +8,11 @@ class FailedExecuteException extends IPDOException
 {
    public function __construct(string $query, \Throwable $e, array $values)
    {
-      $this->errors = [
+      $this->setError([
          'query'            => $query,
          'exception_object' => $e,
          'values'           => $values,
-      ];
+      ]);
+      parent::__construct($e->getMessage());
    }
 }

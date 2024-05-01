@@ -10,8 +10,15 @@ use PDOException;
 
 class IPDOMySQL extends IPDO
 {
-   public function __construct(string $name_db, string $login, string $password, Integer $integer, Array_ $array, string $host = 'localhost', array $options = [])
-   {
+   public function __construct(
+      string $name_db,
+      string $login,
+      string $password,
+      Integer $integer,
+      Array_ $array,
+      string $host = 'localhost',
+      array $options = []
+   ) {
       $this->name_db  = $name_db;
       $this->login    = $login;
       $this->password = $password;
