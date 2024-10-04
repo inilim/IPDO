@@ -404,8 +404,9 @@ abstract class IPDO
     * TODO данный метод взят из библиотеки inilim/integer
     * проверка int для php, 32bit или 64bit
     * может ли значение стать integer без изменений
+    * @param mixed $v
     */
-   protected function isIntPHP(mixed $v): bool
+   protected function isIntPHP($v): bool
    {
       if ($this->isNumeric($v)) {
          /** @var string $v */
@@ -417,8 +418,9 @@ abstract class IPDO
 
    /**
     * TODO данный метод взят из библиотеки inilim/integer
+    * @param mixed $v
     */
-   protected function isNumeric(mixed $v): bool
+   protected function isNumeric($v): bool
    {
       if (!\is_scalar($v) || \is_bool($v)) return false;
       // here string|int|float
