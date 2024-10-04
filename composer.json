@@ -14,10 +14,9 @@
         }
     ],
     "minimum-stability": "stable",
+    "prefer-stable": true,
     "require": {
-        "php": "^8.2",
-        "inilim/integer": "dev-main",
-        "inilim/array": "dev-main"
+        "php": "^7.4 | ^8.2"
     },
     "require-dev": {
         "phpstan/phpstan": "@stable"

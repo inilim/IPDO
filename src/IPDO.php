@@ -1,13 +1,13 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Inilim\IPDO;
 
 use PDO;
 use PDOStatement;
-use Inilim\Array\Array_;
-use Inilim\IPDO\ByteParamDTO;
-use Inilim\Integer\Integer;
 use Inilim\IPDO\IPDOResult;
+use Inilim\IPDO\ByteParamDTO;
 use Inilim\IPDO\Exception\IPDOException;
 use Inilim\IPDO\Exception\FailedExecuteException;
 
@@ -19,29 +19,30 @@ abstract class IPDO
    protected const LEN_SQL = 500;
 
    protected string $host;
-   protected string $name_db;
+   protected string $nameDB;
    protected string $login;
    protected string $password;
+   /**
+    * @var array<int|string,mixed>
+    */
    protected array $options;
    /**
     * Соединение с БД PDO
     */
    protected ?PDO $connect = null;
-   protected Integer $integer;
-   protected Array_ $array;
    /**
     * статус последнего запроса
     */
-   protected bool $last_status = false;
+   protected bool $lastStatus = false;
    /**
     * количество соединений
     */
-   protected int $count_connect = 0;
+   protected int $countConnect = 0;
    /**
     * количество задейственных строк поледнего запроса.
     */
-   protected int $count_touch    = 0;
-   protected int $last_insert_id = -1;
+   protected int $countTouch    = 0;
+   protected int $lastInsertID = -1;
 
    /**
     * выполнить запрос
@@ -50,15 +51,15 @@ abstract class IPDO
     * @return IPDOResult|list<array<string,array<string,string|null|int|float>>>|array<string,string|null|int|float>|array{}
     */
    function exec(
-      string $sql_query,
-      array|int $values = [],
-      int $fetch        = self::FETCH_IPDO_RESULT
-   ): array|IPDOResult {
+      string $query,
+      $values    = [],
+      int $fetch = self::FETCH_IPDO_RESULT
+   ) {
       if (\is_int($values)) {
          $fetch  = $values;
          $values = [];
       }
-      return $this->run($sql_query, $fetch, $values);
+      return $this->run($query, $fetch, $values);
    }
 
    /**
@@ -66,8 +67,8 @@ abstract class IPDO
     */
    function status(): bool
    {
-      if (!$this->hasConnect()) return false;
-      return $this->last_status;
+      if ($this->connect === null) return false;
+      return $this->lastStatus;
    }
 
    /**
@@ -83,21 +84,30 @@ abstract class IPDO
     */
    function involved(): int
    {
-      if (!$this->hasConnect()) return -1;
-      return $this->count_touch;
+      if ($this->connect === null) return -1;
+      return $this->countTouch;
+   }
+
+   /**
+    * получить автоинкремент. в противном случаи вернет -1
+    * @deprecated use getLastInsertID()
+    */
+   function getLastInsert(): int
+   {
+      return $this->getLastInsertID();
    }
 
    /**
     * получить автоинкремент. в противном случаи вернет -1
     */
-   function getLastInsert(): int
+   function getLastInsertID(): int
    {
-      if (!$this->hasConnect()) return -1;
-      return $this->last_insert_id;
+      if ($this->connect === null) return -1;
+      return $this->lastInsertID;
    }
 
    /**
-    * @throws PDOException
+    * @throws \PDOException
     */
    function connect(): void
    {
@@ -114,7 +124,7 @@ abstract class IPDO
     */
    function begin(): bool
    {
-      if (!$this->hasConnect()) return false;
+      if ($this->connect === null) return false;
       if ($this->connect->inTransaction()) {
          return false;
       }
@@ -124,6 +134,7 @@ abstract class IPDO
 
    function rollBack(): void
    {
+      if ($this->connect === null) return;
       if ($this->inTransaction()) {
          $this->connect->rollBack();
       }
@@ -131,6 +142,7 @@ abstract class IPDO
 
    function commit(): bool
    {
+      if ($this->connect === null) return false;
       if ($this->inTransaction()) {
          return $this->connect->commit();
       }
@@ -139,7 +151,7 @@ abstract class IPDO
 
    function inTransaction(): bool
    {
-      if (!$this->hasConnect()) return false;
+      if ($this->connect === null) return false;
       return $this->connect->inTransaction();
    }
 
@@ -156,13 +168,13 @@ abstract class IPDO
     * @return IPDOResult|list<array<string,array<string,string|null|int|float>>>|array<string,string|null|int|float>|array{}
     */
    protected function run(
-      string $sql,
+      string $query,
       int $fetch,
-      array $values = [],
-   ): array|IPDOResult {
-      $this->count_touch    = 0;
-      $this->last_insert_id = -1;
-      $result = $this->tryMainProccess($sql, $values);
+      array $values = []
+   ) {
+      $this->countTouch   = 0;
+      $this->lastInsertID = -1;
+      $result = $this->tryMainProccess($query, $values);
       return $this->fetchResult($result, $fetch);
    }
 
@@ -170,7 +182,7 @@ abstract class IPDO
     * TODO fetch и fetchAll могут выбрасить исключение нужно это отловить
     * @return IPDOResult|list<array<string,array<string,string|null|int|float>>>|array<string,string|null|int|float>|array{}
     */
-   protected function fetchResult(IPDOResult $result, int $fetch): array|IPDOResult
+   protected function fetchResult(IPDOResult $result, int $fetch)
    {
       if ($fetch === self::FETCH_ONCE) {
          $list = $result->getStatement()->fetch(PDO::FETCH_ASSOC);
@@ -187,16 +199,16 @@ abstract class IPDO
    /**
     * @param array<string,mixed> $values
     */
-   protected function tryMainProccess(string &$sql, array $values = []): IPDOResult
+   protected function tryMainProccess(string &$query, array $values = []): IPDOResult
    {
       try {
-         $this->last_status = true;
-         return $this->mainProccess($sql, $values);
+         $this->lastStatus = true;
+         return $this->mainProccess($query, $values);
       } catch (\Throwable $e) {
-         $this->last_status = false;
+         $this->lastStatus = false;
          $ne = new FailedExecuteException($e->getMessage());
          $ne->setError([
-            'query'            => $this->shortQuery($sql),
+            'query'            => $this->shortQuery($query),
             'exception_object' => $e,
             'values'           => $values,
          ]);
@@ -208,7 +220,7 @@ abstract class IPDO
     * @param array<string,mixed> $values
     * @throws IPDOException
     */
-   protected function mainProccess(string &$sql, array $values = []): IPDOResult
+   protected function mainProccess(string &$query, array $values = []): IPDOResult
    {
       $this->connectDB();
 
@@ -217,12 +229,12 @@ abstract class IPDO
       }
 
       // IN OR NOT IN (:item,:item,:item)
-      $sql = $this->arrayToIN($values, $sql);
+      $query = $this->arrayToIN($values, $query);
 
-      $this->removeUnwantedKeys($values, $sql);
+      $this->removeUnwantedKeys($values, $query);
 
       // подготовка запроса
-      $stm = $this->connect->prepare($sql);
+      $stm = $this->connect->prepare($query);
 
       if (\is_bool($stm)) {
          $e = new IPDOException('PDO::prepare return false');
@@ -250,7 +262,7 @@ abstract class IPDO
    }
 
    /**
-    * @throws PDOException
+    * @throws \PDOException
     */
    abstract protected function connectDB(): void;
 
@@ -259,11 +271,12 @@ abstract class IPDO
     * @param array<string,string|null|int|float|bool|ByteParamDTO> $values
     * @return string[]
     */
-   protected function removeUnwantedKeys(array &$values, string $sql): array
+   protected function removeUnwantedKeys(array &$values, string $query): array
    {
-      if (!\str_contains($sql, ':')) return [];
+      if (\strpos($query, ':') === false) return [];
       $masks = [];
-      \preg_match_all('#\:[a-z\_A-Z0-9]+#', $sql, $masks);
+      \preg_match_all('#\:[a-z\_A-Z0-9]+#', $query, $masks);
+      // @phpstan-ignore-next-line
       $masks = $masks[0] ?? [];
       if (!$masks) return [];
       $masks      = \array_map(static fn($m) => \ltrim($m, ':'), $masks);
@@ -276,15 +289,18 @@ abstract class IPDO
     * @param array<string,mixed> $values
     * @throws IPDOException
     */
-   protected function arrayToIN(array &$values, string &$sql): string
+   protected function arrayToIN(array &$values, string &$query): string
    {
       $mark = 'in_item_';
       $num = \mt_rand(1000, 9999);
-      foreach ($values as $key_val => $val) {
+      foreach ($values as $key => $val) {
          if (!\is_array($val)) continue;
 
-         if ($this->array->isMultidimensional($val)) {
-            $e = new IPDOException($key_val . ': многомерный массив.');
+         if ($this->isMultidimensional($val)) {
+            $e = new IPDOException(\sprintf(
+               'value by key "%s" multidimensional array',
+               $key
+            ));
             $e->setError([
                $e->getMessage(),
                $val,
@@ -292,25 +308,37 @@ abstract class IPDO
             throw $e;
          }
 
-         $mark_keys = \array_map(static function ($in_item) use (&$values, $mark, &$num) {
-            $new_key = $mark . $num;
-            $values[$new_key] = $in_item;
+         $markKeys = \array_map(static function ($inItem) use (&$values, $mark, &$num) {
+            $newKey = $mark . $num;
+            $values[$newKey] = $inItem;
             $num++;
-            return ':' . $new_key;
+            return ':' . $newKey;
          }, $val);
 
-         // $sql = str_replace(':' . $key_val, implode(',', $mark_keys), $sql);
-         $sql = \preg_replace(
-            '#\([\s\t]*\:' . \preg_quote($key_val) . '[\s\t]*\)#',
-            '(' . \implode(',', $mark_keys) . ')',
-            $sql
+         // $query = str_replace(':' . $key, implode(',', $markKeys), $query);
+         $query = \preg_replace(
+            '#\([\s\t]*\:' . \preg_quote($key) . '[\s\t]*\)#',
+            '(' . \implode(',', $markKeys) . ')',
+            $query
          );
 
-         $mark_keys = [];
-         unset($values[$key_val]);
+         if ($query === null) {
+            $e = new IPDOException(\sprintf(
+               '%s: preg_replace return null',
+               __FUNCTION__,
+            ));
+            $e->setError([
+               '$query' => $query,
+               '$key'   => $key,
+            ]);
+            throw $e;
+         }
+
+         $markKeys = [];
+         unset($values[$key]);
       }
 
-      return $sql;
+      return $query;
    }
 
    /**
@@ -323,7 +351,8 @@ abstract class IPDO
       // &$val требование от bindParam https://www.php.net/manual/ru/pdostatement.bindparam.php#98145
       foreach ($values as $key => &$val) {
          $mask = ':' . $key;
-         if ($this->integer->isIntPHP($val)) {
+         if ($this->isIntPHP($val)) {
+            // @phpstan-ignore-next-line
             $val = \intval($val);
             $stm->bindParam($mask, $val, PDO::PARAM_INT);
          } elseif (\is_bool($val)) {
@@ -332,7 +361,8 @@ abstract class IPDO
             $stm->bindParam($mask, $val, PDO::PARAM_NULL);
          } elseif (\is_object($val)) {
             if ($val instanceof ByteParamDTO) {
-               $stm->bindParam($mask, $val->value, PDO::PARAM_LOB);
+               $val = $val->getValue();
+               $stm->bindParam($mask, $val, PDO::PARAM_LOB);
             }
          } else {
             $val = \strval($val);
@@ -343,20 +373,18 @@ abstract class IPDO
 
    protected function defineResult(PDOStatement $stm): IPDOResult
    {
-      $this->count_touch    = $stm->rowCount();
-      $this->last_insert_id = $this->getLastInsertID();
-
       return new IPDOResult(
          $stm,
-         $this->count_touch,
-         $this->last_insert_id
+         $this->countTouch   = $stm->rowCount(),
+         $this->lastInsertID = $this->defineLastInsertID()
       );
    }
 
-   protected function getLastInsertID(): int
+   protected function defineLastInsertID(): int
    {
+      if ($this->connect === null) return -1;
       $id = $this->connect->lastInsertId();
-      if ($this->integer->isNumeric($id)) return \intval($id);
+      if ($this->isNumeric($id)) return \intval($id);
       // lastInsertId может вернуть строку, представляющую последнее значение
       return -1;
    }
@@ -364,11 +392,49 @@ abstract class IPDO
    /**
     * форматируем запрос для логов
     */
-   protected function shortQuery(string &$sql): string
+   protected function shortQuery(string &$query): string
    {
-      $sql = \str_replace(["\n", "\r", "\r\n", "\t"], ' ', $sql);
-      $sql = \preg_replace('#\s{2,}#', ' ', $sql) ?? '';
-      if (\strlen($sql) > self::LEN_SQL) return \substr($sql, 0, self::LEN_SQL) . '...';
-      return $sql;
+      $query = \str_replace(["\n", "\r", "\r\n", "\t"], ' ', $query);
+      $query = \preg_replace('#\s{2,}#', ' ', $query) ?? '';
+      if (\strlen($query) > self::LEN_SQL) return \substr($query, 0, self::LEN_SQL) . '...';
+      return $query;
+   }
+
+   /**
+    * TODO данный метод взят из библиотеки inilim/integer
+    * проверка int для php, 32bit или 64bit
+    * может ли значение стать integer без изменений
+    */
+   protected function isIntPHP(mixed $v): bool
+   {
+      if ($this->isNumeric($v)) {
+         /** @var string $v */
+         if (\strval(\intval($v)) === \strval($v)) return true;
+         return false;
+      }
+      return false;
+   }
+
+   /**
+    * TODO данный метод взят из библиотеки inilim/integer
+    */
+   protected function isNumeric(mixed $v): bool
+   {
+      if (!\is_scalar($v) || \is_bool($v)) return false;
+      // here string|int|float
+      if (\preg_match('#^\-?[1-9][0-9]{0,}$|^0$#', \strval($v))) return true;
+      return false;
+   }
+
+   /**
+    * TODO данный метод взят из библиотеки inilim/array
+    * проверка на многомерный массив
+    * true - многомерный
+    * false - одномерный
+    * @param mixed[] $arr
+    */
+   protected function isMultidimensional(array $arr): bool
+   {
+      return (\sizeof($arr) - \sizeof($arr, \COUNT_RECURSIVE)) !== 0;
    }
 }

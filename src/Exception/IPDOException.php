@@ -1,31 +1,31 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Inilim\IPDO\Exception;
 
-use \Exception;
-
-class IPDOException extends Exception
+class IPDOException extends \Exception
 {
    /**
-    * @var array
+    * @var mixed[]
     */
-   protected $errors = [];
+   protected $error = [];
 
    /**
-    * @param mixed $any
+    * @param mixed $error
     * @return self
     */
-   public function setError($any)
+   public function setError($error)
    {
-      $this->errors = \is_array($any) ? $any : [$any];
+      $this->error = \is_array($error) ? $error : [$error];
       return $this;
    }
 
    /**
-    * @return array
+    * @return mixed[]
     */
    public function getError()
    {
-      return $this->errors;
+      return $this->error;
    }
 }

@@ -1,10 +1,24 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Inilim\IPDO;
 
-final readonly class ByteParamDTO
+/**
+ * @psalm-readonly
+ */
+final class ByteParamDTO
 {
+    protected string $value;
+
     function __construct(
-        public string $value
-    ) {}
+        string $value
+    ) {
+        $this->value = $value;
+    }
+
+    function getValue(): string
+    {
+        return $this->value;
+    }
 }

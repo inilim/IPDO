@@ -1,47 +1,46 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Inilim\IPDO;
 
 use Inilim\IPDO\IPDO;
 use Inilim\IPDO\Exception\SQLiteNotFoundFileException;
-use Inilim\Integer\Integer;
-use Inilim\Array\Array_;
-use PDO;
-use PDOException;
 
 class IPDOSQLite extends IPDO
 {
    /**
-    * @param string $path_to_file "path/to/file" OR ":memory:"
+    * @param string $pathToFile "path/to/file" OR ":memory:"
+    * @param array<int|string,mixed> $options
     */
-   public function __construct(string $path_to_file, Integer $integer, Array_ $array, array $options = [])
+   public function __construct(string $pathToFile, array $options = [])
    {
-      $this->name_db = $path_to_file;
-      $this->integer = $integer;
-      $this->array   = $array;
+      $this->nameDB  = $pathToFile;
       $this->options = $options;
    }
 
    /**
-    * В момент создания PDO может выбросить исключение PDOException
+    * В момент создания PDO может выбросить исключение \PDOException
     * @throws SQLiteNotFoundFileException
-    * @throws PDOException
+    * @throws \PDOException
     */
    protected function connectDB(): void
    {
       if ($this->connect !== null) return;
 
-      if ($this->name_db !== ':memory:' && !\is_file($this->name_db)) {
+      if ($this->nameDB !== ':memory:' && !\is_file($this->nameDB)) {
          throw new SQLiteNotFoundFileException(\sprintf(
             'File not found "%s"',
-            $this->name_db,
+            $this->nameDB,
          ));
       }
 
-      $this->count_connect++;
-      $this->connect = new PDO(
-         dsn: 'sqlite:' . $this->name_db,
-         options: $this->options
+      $this->countConnect++;
+      $this->connect = new \PDO(
+         'sqlite:' . $this->nameDB,
+         null,
+         null,
+         $this->options
       );
    }
 }
