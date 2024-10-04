@@ -96,6 +96,9 @@ abstract class IPDO
       return $this->last_insert_id;
    }
 
+   /**
+    * @throws PDOException
+    */
    function connect(): void
    {
       if ($this->connect === null) $this->connectDB();
@@ -191,11 +194,13 @@ abstract class IPDO
          return $this->mainProccess($sql, $values);
       } catch (\Throwable $e) {
          $this->last_status = false;
-         throw new FailedExecuteException(
-            query: $this->shortQuery($sql),
-            e: $e,
-            values: $values
-         );
+         $ne = new FailedExecuteException($e->getMessage());
+         $ne->setError([
+            'query'            => $this->shortQuery($sql),
+            'exception_object' => $e,
+            'values'           => $values,
+         ]);
+         throw $ne;
       }
    }
 
@@ -244,6 +249,9 @@ abstract class IPDO
       return $this->defineResult($stm);
    }
 
+   /**
+    * @throws PDOException
+    */
    abstract protected function connectDB(): void;
 
    /**
