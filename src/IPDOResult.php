@@ -2,18 +2,15 @@
 
 namespace Inilim\IPDO;
 
-use \PDOStatement;
-
-class IPDOResult
+final readonly class IPDOResult
 {
    public function __construct(
-      protected PDOStatement $statement,
+      protected \PDOStatement $statement,
       protected int $count_touch,
       protected int $last_insert_id,
-   ) {
-   }
+   ) {}
 
-   public function getStatement(): PDOStatement
+   public function getStatement(): \PDOStatement
    {
       return $this->statement;
    }

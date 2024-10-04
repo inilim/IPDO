@@ -2,20 +2,21 @@
 
 namespace Inilim\IPDO;
 
+use PDO;
+use PDOStatement;
+use Inilim\Array\Array_;
+use Inilim\IPDO\ByteParamDTO;
+use Inilim\Integer\Integer;
+use Inilim\IPDO\IPDOResult;
 use Inilim\IPDO\Exception\IPDOException;
 use Inilim\IPDO\Exception\FailedExecuteException;
-use Inilim\IPDO\IPDOResult;
-use Inilim\Integer\Integer;
-use Inilim\Array\Array_;
-use PDOStatement;
-use PDO;
 
 abstract class IPDO
 {
-   const FETCH_ALL            = 2;
-   const FETCH_ONCE           = 1;
-   const FETCH_IPDO_RESULT    = 0;
-   protected const LEN_SQL    = 500;
+   const FETCH_ALL         = 2;
+   const FETCH_ONCE        = 1;
+   const FETCH_IPDO_RESULT = 0;
+   protected const LEN_SQL = 500;
 
    protected string $host;
    protected string $name_db;
@@ -46,9 +47,9 @@ abstract class IPDO
     * выполнить запрос
     * @param int|array<string,mixed> $values
     * @param int $fetch 0 вернуть IPDOResult, 1 вытащить один результат, 2 вытащить все.
-    * @return @return IPDOResult|list<array<string,array<string,string|null|int|float>>>|array<string,string|null|int|float>|array{}
+    * @return IPDOResult|list<array<string,array<string,string|null|int|float>>>|array<string,string|null|int|float>|array{}
     */
-   public function exec(
+   function exec(
       string $sql_query,
       array|int $values = [],
       int $fetch        = self::FETCH_IPDO_RESULT
@@ -57,13 +58,13 @@ abstract class IPDO
          $fetch  = $values;
          $values = [];
       }
-      return $this->run($sql_query, $values, $fetch);
+      return $this->run($sql_query, $fetch, $values);
    }
 
    /**
     * получить статус последнего запроса. В случаи отсутствия запроса выдаст false
     */
-   public function status(): bool
+   function status(): bool
    {
       if (!$this->hasConnect()) return false;
       return $this->last_status;
@@ -72,7 +73,7 @@ abstract class IPDO
    /**
     * закрыть соединение с базой
     */
-   public function close(): void
+   function close(): void
    {
       $this->connect = null;
    }
@@ -80,7 +81,7 @@ abstract class IPDO
    /**
     * возвращает количество задейственных строк последнего запроса. Запросы типа SELECT тоже считаются!
     */
-   public function involved(): int
+   function involved(): int
    {
       if (!$this->hasConnect()) return -1;
       return $this->count_touch;
@@ -89,18 +90,18 @@ abstract class IPDO
    /**
     * получить автоинкремент. в противном случаи вернет -1
     */
-   public function getLastInsert(): int
+   function getLastInsert(): int
    {
       if (!$this->hasConnect()) return -1;
       return $this->last_insert_id;
    }
 
-   public function connect(): void
+   function connect(): void
    {
       if ($this->connect === null) $this->connectDB();
    }
 
-   public function hasConnect(): bool
+   function hasConnect(): bool
    {
       return $this->connect !== null;
    }
@@ -108,7 +109,7 @@ abstract class IPDO
    /**
     * активируем транзакцию, если мы повторно активируем транзакцию выдаст false
     */
-   public function begin(): bool
+   function begin(): bool
    {
       if (!$this->hasConnect()) return false;
       if ($this->connect->inTransaction()) {
@@ -118,14 +119,14 @@ abstract class IPDO
       return true;
    }
 
-   public function rollBack(): void
+   function rollBack(): void
    {
       if ($this->inTransaction()) {
          $this->connect->rollBack();
       }
    }
 
-   public function commit(): bool
+   function commit(): bool
    {
       if ($this->inTransaction()) {
          return $this->connect->commit();
@@ -133,7 +134,7 @@ abstract class IPDO
       return false;
    }
 
-   public function inTransaction(): bool
+   function inTransaction(): bool
    {
       if (!$this->hasConnect()) return false;
       return $this->connect->inTransaction();
@@ -153,8 +154,8 @@ abstract class IPDO
     */
    protected function run(
       string $sql,
+      int $fetch,
       array $values = [],
-      int $fetch    = self::FETCH_IPDO_RESULT
    ): array|IPDOResult {
       $this->count_touch    = 0;
       $this->last_insert_id = -1;
@@ -206,10 +207,12 @@ abstract class IPDO
    {
       $this->connectDB();
 
-      if ($this->connect === null) throw new IPDOException('IPDO::connectDB property "connect" is null');
+      if ($this->connect === null) {
+         throw new IPDOException('IPDO::connectDB() property "connect" is null');
+      }
 
       // IN OR NOT IN (:item,:item,:item)
-      $sql = $this->convertList($values, $sql);
+      $sql = $this->arrayToIN($values, $sql);
 
       $this->removeUnwantedKeys($values, $sql);
 
@@ -245,7 +248,7 @@ abstract class IPDO
 
    /**
     * удаляем ненужные ключи из массива $values
-    * @param array<string,string|null|int|float> $values
+    * @param array<string,string|null|int|float|bool|ByteParamDTO> $values
     * @return string[]
     */
    protected function removeUnwantedKeys(array &$values, string $sql): array
@@ -254,8 +257,8 @@ abstract class IPDO
       $masks = [];
       \preg_match_all('#\:[a-z\_A-Z0-9]+#', $sql, $masks);
       $masks = $masks[0] ?? [];
-      if (!$masks) return $masks;
-      $masks      = \array_map(fn ($m) => \trim($m, ':'), $masks);
+      if (!$masks) return [];
+      $masks      = \array_map(static fn($m) => \ltrim($m, ':'), $masks);
       $masks_keys = \array_flip($masks);
       $values     = \array_intersect_key($values, $masks_keys);
       return $masks;
@@ -265,7 +268,7 @@ abstract class IPDO
     * @param array<string,mixed> $values
     * @throws IPDOException
     */
-   protected function convertList(array &$values, string &$sql): string
+   protected function arrayToIN(array &$values, string &$sql): string
    {
       $mark = 'in_item_';
       $num = \mt_rand(1000, 9999);
@@ -281,9 +284,9 @@ abstract class IPDO
             throw $e;
          }
 
-         $mark_keys = \array_map(function ($val_item) use (&$values, $mark, &$num) {
+         $mark_keys = \array_map(static function ($in_item) use (&$values, $mark, &$num) {
             $new_key = $mark . $num;
-            $values[$new_key] = $val_item;
+            $values[$new_key] = $in_item;
             $num++;
             return ':' . $new_key;
          }, $val);
@@ -294,6 +297,8 @@ abstract class IPDO
             '(' . \implode(',', $mark_keys) . ')',
             $sql
          );
+
+         $mark_keys = [];
          unset($values[$key_val]);
       }
 
@@ -302,7 +307,7 @@ abstract class IPDO
 
    /**
     * @param PDOStatement $stm
-    * @param array<string,string|null|int|float> $values
+    * @param array<string,string|null|int|float|bool|ByteParamDTO> $values
     */
    protected function setBindParams(PDOStatement $stm, array &$values): void
    {
@@ -313,8 +318,14 @@ abstract class IPDO
          if ($this->integer->isIntPHP($val)) {
             $val = \intval($val);
             $stm->bindParam($mask, $val, PDO::PARAM_INT);
+         } elseif (\is_bool($val)) {
+            $stm->bindParam($mask, $val, PDO::PARAM_BOOL);
          } elseif ($val === null) {
             $stm->bindParam($mask, $val, PDO::PARAM_NULL);
+         } elseif (\is_object($val)) {
+            if ($val instanceof ByteParamDTO) {
+               $stm->bindParam($mask, $val->value, PDO::PARAM_LOB);
+            }
          } else {
             $val = \strval($val);
             $stm->bindParam($mask, $val, PDO::PARAM_STR);
