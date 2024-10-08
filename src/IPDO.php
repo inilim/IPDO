@@ -396,7 +396,9 @@ abstract class IPDO
    {
       $query = \str_replace(["\n", "\r", "\r\n", "\t"], ' ', $query);
       $query = \preg_replace('#\s{2,}#', ' ', $query) ?? '';
-      if (\strlen($query) > self::LEN_SQL) return \substr($query, 0, self::LEN_SQL) . '...';
+      if (\strlen($query) > self::LEN_SQL) {
+         return \substr($query, 0, self::LEN_SQL) . '...';
+      }
       return $query;
    }
 
