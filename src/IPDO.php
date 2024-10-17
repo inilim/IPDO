@@ -205,14 +205,23 @@ abstract class IPDO
          $this->lastStatus = true;
          return $this->mainProccess($query, $values);
       } catch (\Throwable $e) {
-
          $this->lastStatus = false;
          $ne = new FailedExecuteException($e->getMessage());
-         $ne->setError([
-            'query'            => $this->shortQuery($query),
-            'exception_object' => $e,
-            'values'           => $values,
-         ]);
+
+         if ($e instanceof IPDOException) {
+            $ne->setError([
+               'query'  => $this->shortQuery($query),
+               'error'  => $e->getError(),
+               'values' => $values,
+            ]);
+         } else {
+            $ne->setError([
+               'query'            => $this->shortQuery($query),
+               'exception_object' => $e,
+               'values'           => $values,
+            ]);
+         }
+
          throw $ne;
       }
    }
