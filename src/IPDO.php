@@ -263,7 +263,10 @@ abstract class IPDO
          $e = new IPDOException('PDOStatement::execute return false');
          $e->setError([
             $e->getMessage(),
-            $stm->errorInfo(),
+            'PDOStatement' => [
+               'error_info'        => $stm->errorInfo(),
+               'debug_dump_params' => $this->getDebugDumpParams($stm),
+            ]
          ]);
          throw $e;
       }
@@ -275,6 +278,13 @@ abstract class IPDO
     * @throws \PDOException
     */
    abstract protected function connectDB(): void;
+
+   protected function getDebugDumpParams(PDOStatement $stm): string
+   {
+      \ob_start();
+      $stm->debugDumpParams();
+      return \strval(\ob_get_clean());
+   }
 
    /**
     * удаляем ненужные ключи из массива $values
