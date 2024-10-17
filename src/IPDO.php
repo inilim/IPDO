@@ -205,6 +205,7 @@ abstract class IPDO
          $this->lastStatus = true;
          return $this->mainProccess($query, $values);
       } catch (\Throwable $e) {
+
          $this->lastStatus = false;
          $ne = new FailedExecuteException($e->getMessage());
          $ne->setError([
