@@ -7,7 +7,8 @@ namespace Inilim\IPDO;
 use PDO;
 use PDOStatement;
 use Inilim\IPDO\IPDOResult;
-use Inilim\IPDO\ByteParamDTO;
+use Inilim\IPDO\DTO\ByteParamDTO;
+use Inilim\IPDO\DTO\QueryParamDTO;
 use Inilim\IPDO\Exception\IPDOException;
 use Inilim\IPDO\Exception\FailedExecuteException;
 
@@ -16,7 +17,7 @@ abstract class IPDO
     const FETCH_ALL         = 2;
     const FETCH_ONCE        = 1;
     const FETCH_IPDO_RESULT = 0;
-    protected const LEN_SQL = 500;
+    const LEN_SQL           = 500;
 
     protected string $host;
     protected string $nameDB;
@@ -41,7 +42,7 @@ abstract class IPDO
     /**
      * количество задейственных строк поледнего запроса.
      */
-    protected int $countTouch    = 0;
+    protected int $countTouch   = 0;
     protected int $lastInsertID = -1;
 
     /**
@@ -59,7 +60,7 @@ abstract class IPDO
             $fetch  = $values;
             $values = [];
         }
-        return $this->run($query, $fetch, $values);
+        return $this->run(new QueryParamDTO($query, $values), $fetch);
     }
 
     /**
@@ -164,18 +165,16 @@ abstract class IPDO
     // ---------------------------------------------
 
     /**
-     * @param array<string,mixed> $values
      * @return IPDOResult|list<array<string,array<string,string|null|int|float>>>|array<string,string|null|int|float>|array{}
      */
-    protected function run(
-        string $query,
-        int $fetch,
-        array $values = []
-    ) {
+    protected function run(QueryParamDTO $queryParam, int $fetch)
+    {
         $this->countTouch   = 0;
         $this->lastInsertID = -1;
-        $result = $this->tryMainProccess($query, $values);
-        return $this->fetchResult($result, $fetch);
+        return $this->fetchResult(
+            $this->tryMainProccess($queryParam),
+            $fetch
+        );
     }
 
     /**
@@ -196,41 +195,36 @@ abstract class IPDO
         return $result;
     }
 
-    /**
-     * @param array<string,mixed> $values
-     */
-    protected function tryMainProccess(string &$query, array $values = []): IPDOResult
+    protected function tryMainProccess(QueryParamDTO $queryParam): IPDOResult
     {
         try {
             $this->lastStatus = true;
-            return $this->mainProccess($query, $values);
+            return $this->mainProccess($queryParam);
         } catch (\Throwable $e) {
             $this->lastStatus = false;
-            $ne = new FailedExecuteException($e->getMessage());
+            $ee = new FailedExecuteException($e->getMessage());
+            $queryParam->query = $this->shortQuery($queryParam->query);
 
             if ($e instanceof IPDOException) {
-                $ne->setError([
-                    'query'  => $this->shortQuery($query),
-                    'error'  => $e->getError(),
-                    'values' => $values,
+                $ee->setError([
+                    'query_param' => (array)$queryParam,
+                    'error'       => $e->getError(),
                 ]);
             } else {
-                $ne->setError([
-                    'query'            => $this->shortQuery($query),
+                $ee->setError([
+                    'query_param'      => (array)$queryParam,
                     'exception_object' => $e,
-                    'values'           => $values,
                 ]);
             }
 
-            throw $ne;
+            throw $ee;
         }
     }
 
     /**
-     * @param array<string,mixed> $values
      * @throws IPDOException
      */
-    protected function mainProccess(string &$query, array $values = []): IPDOResult
+    protected function mainProccess(QueryParamDTO $queryParam): IPDOResult
     {
         $this->connectDB();
 
@@ -239,24 +233,24 @@ abstract class IPDO
         }
 
         // IN OR NOT IN (:item,:item,:item)
-        $query = $this->arrayToIN($values, $query);
-
-        $this->removeUnwantedKeys($values, $query);
+        $this->arrayToIN($queryParam);
 
         // подготовка запроса
-        $stm = $this->connect->prepare($query);
+        $stm = $this->connect->prepare($queryParam->query);
 
-        if (\is_bool($stm)) {
+        if ($stm === false) {
             $e = new IPDOException('PDO::prepare return false');
             $e->setError([
                 $e->getMessage(),
-                $this->connect->errorInfo(),
+                'PDO' => [
+                    'error_info' => $this->connect->errorInfo(),
+                ],
             ]);
             throw $e;
         }
 
         // Устанавливаем параметры к запросу
-        $this->setBindParams($stm, $values);
+        $this->setBindParams($stm, $queryParam);
 
         // выполнить запрос
         if (!$stm->execute()) {
@@ -287,89 +281,69 @@ abstract class IPDO
     }
 
     /**
-     * удаляем ненужные ключи из массива $values
-     * @param array<string,string|null|int|float|bool|ByteParamDTO> $values
-     * @return string[]
-     */
-    protected function removeUnwantedKeys(array &$values, string $query): array
-    {
-        if (\strpos($query, ':') === false) return [];
-        $masks = [];
-        \preg_match_all('#\:[a-z\_A-Z0-9]+#', $query, $masks);
-        // @phpstan-ignore-next-line
-        $masks = $masks[0] ?? [];
-        if (!$masks) return [];
-        $masks      = \array_map(static fn($m) => \ltrim($m, ':'), $masks);
-        $masks_keys = \array_flip($masks);
-        $values     = \array_intersect_key($values, $masks_keys);
-        return $masks;
-    }
-
-    /**
-     * @param array<string,mixed> $values
      * @throws IPDOException
      */
-    protected function arrayToIN(array &$values, string &$query): string
+    protected function arrayToIN(QueryParamDTO $queryParam): void
     {
         $mark = 'in_item_';
         $num = \mt_rand(1000, 9999);
-        foreach ($values as $key => $val) {
-            if (!\is_array($val)) continue;
+        $queryBefore = $queryParam->query;
+        foreach ($queryParam->values as $nameField => $value) {
+            if (!\is_array($value)) continue;
 
-            if ($this->isMultidimensional($val)) {
+            if ($this->isMultidimensional($value)) {
                 $e = new IPDOException(\sprintf(
-                    'value by key "%s" multidimensional array',
-                    $key
+                    'value by name "%s" multidimensional array',
+                    $nameField
                 ));
                 $e->setError([
                     $e->getMessage(),
-                    $val,
+                    '$nameField' => $nameField,
+                    '$value'     => $value,
                 ]);
                 throw $e;
             }
 
-            $markKeys = \array_map(static function ($inItem) use (&$values, $mark, &$num) {
+            // создаем новые ключи
+            $markKeys = \array_map(static function ($inItem) use (&$queryParam, $mark, &$num) {
                 $newKey = $mark . $num;
-                $values[$newKey] = $inItem;
+                $queryParam->values[$newKey] = $inItem;
                 $num++;
                 return ':' . $newKey;
-            }, $val);
+            }, $value);
 
-            // $query = str_replace(':' . $key, implode(',', $markKeys), $query);
-            $query = \preg_replace(
-                '#\([\s\t]*\:' . \preg_quote($key) . '[\s\t]*\)#',
+            $queryParam->query = \preg_replace(
+                '#\([\s\t]*\:' . \preg_quote($nameField) . '[\s\t]*\)#',
                 '(' . \implode(',', $markKeys) . ')',
-                $query
+                $queryParam->query
             );
 
-            if ($query === null) {
+            if ($queryParam->query === null) {
+                $queryParam->query = $queryBefore;
                 $e = new IPDOException(\sprintf(
                     '%s: preg_replace return null',
                     __FUNCTION__,
                 ));
                 $e->setError([
-                    '$query' => $query,
-                    '$key'   => $key,
+                    '$nameField' => $nameField,
+                    '$markKeys'  => $markKeys,
                 ]);
                 throw $e;
             }
 
             $markKeys = [];
-            unset($values[$key]);
+            unset($queryParam->values[$nameField]);
         }
-
-        return $query;
     }
 
     /**
      * @param PDOStatement $stm
-     * @param array<string,string|null|int|float|bool|ByteParamDTO> $values
      */
-    protected function setBindParams(PDOStatement $stm, array &$values): void
+    protected function setBindParams(PDOStatement $stm, QueryParamDTO $queryParam): void
     {
         //$v = [];# массив для отладки
         // &$val требование от bindParam https://www.php.net/manual/ru/pdostatement.bindparam.php#98145
-        foreach ($values as $key => &$val) {
+        foreach ($queryParam->values as $key => &$val) {
             $mask = ':' . $key;
             if ($this->isIntPHP($val)) {
                 // @phpstan-ignore-next-line
@@ -412,7 +386,7 @@ abstract class IPDO
     /**
      * форматируем запрос для логов
      */
-    protected function shortQuery(string &$query): string
+    protected function shortQuery(string $query): string
     {
         $query = \str_replace(["\n", "\r", "\r\n", "\t"], ' ', $query);
         $query = \preg_replace('#\s{2,}#', ' ', $query) ?? '';
