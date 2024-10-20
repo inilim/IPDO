@@ -46,11 +46,11 @@ final class QueryParamDTO
 
         if (!$hasHoles) {
             // TODO стоит ли ругатся на переданные значения без дырок?
-            // if ($values) {
-            //     throw new IPDOException([
-            //         'message' => 'Invalid Argument: The values for the request were passed, but there are no holes in the request'
-            //     ]);
-            // }
+            if ($values) {
+                throw new IPDOException([
+                    'message' => 'Invalid Argument: 0'
+                ]);
+            }
             $this->values = [];
             return;
         }
@@ -62,7 +62,7 @@ final class QueryParamDTO
         // !что если в значении IN будут обьекты
         // !обработка значений со списком для оператора IN
         // !исключить многомерность значений в IN значениях
-        // в массиве для IN не должно быть null
+        // !в массиве для IN не должно быть null
 
         $this->values = $values;
         unset($values);
@@ -74,16 +74,17 @@ final class QueryParamDTO
         // INFO берем только те ключи что есть в запросе
         // ---------------------------------------------
 
-        // $sizeBefore = \sizeof($this->values);
+        $sizeBefore = \sizeof($this->values);
         $this->values = \array_intersect_key($this->values, $holes);
-        // $sizeAfter = \sizeof($this->values);
+        $sizeAfter = \sizeof($this->values);
 
         // TODO стоит ли ругатся на лишние значения?
-        // if ($sizeBefore !== $sizeAfter) {
-        //     throw new IPDOException([
-        //         'message' => \sprintf('Invalid Argument: 1'),
-        //     ]);
-        // }
+        if ($sizeBefore !== $sizeAfter) {
+            throw new IPDOException([
+                'message' => \sprintf('Invalid Argument: 1'),
+            ]);
+        }
+        unset($sizeBefore);
 
         if (!$this->values) {
             throw new IPDOException([
@@ -95,7 +96,7 @@ final class QueryParamDTO
         // INFO проверям что ключи из запроса есть в values
         // ---------------------------------------------
 
-        if (\sizeof($this->values) !== \sizeof($holes)) {
+        if ($sizeAfter !== \sizeof($holes)) {
             throw new IPDOException([
                 'message' => \sprintf('Invalid Argument: 3'),
             ]);
@@ -115,24 +116,7 @@ final class QueryParamDTO
                     }
                     // INFO тут же обрабатываем массив значений
                     elseif (\is_array($this->values[$name])) {
-                        if ($this->isMultidimensional($this->values[$name])) {
-                            throw new IPDOException([
-                                'message' => \sprintf('Invalid Argument: 4'),
-                            ]);
-                        }
-                        $newHoles = [];
-                        foreach ($this->values[$name] as $subValue) {
-                            if ($subValue === null) {
-                                throw new IPDOException([
-                                    'message' => \sprintf('Invalid Argument: 5'),
-                                ]);
-                            }
-                            $newName = $this->getNewName();
-                            $newHoles[] = ' :' . $newName;
-                            $this->values[$newName] = \is_object($subValue) ? clone $subValue : $subValue;
-                        } // endforeach
-                        $this->query = $this->replaceFirst('{' . $name . '}', ' ( ' . \implode(',', $newHoles) . ' ) ', $this->query);
-                        unset($newHoles);
+                        $this->prepareSubValueArrayToInOperator($name);
                         continue; // continue чтобы не выполнить нижний replaceFirst
                     } else {
                         $newName = $this->getNewName();
@@ -140,18 +124,44 @@ final class QueryParamDTO
                     }
 
                     $this->query = $this->replaceFirst('{' . $name . '}', ' :' . $newName . ' ', $this->query);
-                } // endFor
+                } // endfor
                 unset($this->values[$name]);
-            }
+            } // end repeat
             // INFO переименовка
             else {
-                $newName = $this->getNewName();
-                $this->values[$newName] = $this->values[$name];
+                // INFO тут же обрабатываем массив значений
+                if (\is_array($this->values[$name])) {
+                    $this->prepareSubValueArrayToInOperator($name);
+                } else {
+                    $newName = $this->getNewName();
+                    $this->values[$newName] = $this->values[$name];
+                    $this->query = \str_replace('{' . $name . '}', ' :' . $newName . ' ', $this->query);
+                }
                 unset($this->values[$name]);
-                $this->query = \str_replace('{' . $name . '}', ' :' . $newName . ' ', $this->query);
             }
         } // endforeach
         // unset($newName, $name, $repeat, $i);
+    }
+
+    protected function prepareSubValueArrayToInOperator(string $oldName)
+    {
+        if ($this->isMultidimensional($this->values[$oldName])) {
+            throw new IPDOException([
+                'message' => \sprintf('Invalid Argument: 4'),
+            ]);
+        }
+        $newHoles = [];
+        foreach ($this->values[$oldName] as $subValue) {
+            if ($subValue === null) {
+                throw new IPDOException([
+                    'message' => \sprintf('Invalid Argument: 5'),
+                ]);
+            }
+            $newName = $this->getNewName();
+            $newHoles[] = ' :' . $newName;
+            $this->values[$newName] = \is_object($subValue) ? clone $subValue : $subValue;
+        } // endforeach
+        $this->query = $this->replaceFirst('{' . $oldName . '}', ' ( ' . \implode(',', $newHoles) . ' ) ', $this->query);
     }
 
     protected function getNewName(): string
