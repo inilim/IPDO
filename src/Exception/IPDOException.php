@@ -6,26 +6,22 @@ namespace Inilim\IPDO\Exception;
 
 class IPDOException extends \Exception
 {
-   /**
-    * @var mixed[]
-    */
-   protected $error = [];
+    /**
+     * @var mixed[]
+     */
+    protected $errorInfo = [];
 
-   /**
-    * @param mixed $error
-    * @return self
-    */
-   public function setError($error)
-   {
-      $this->error = \is_array($error) ? $error : [$error];
-      return $this;
-   }
+    function __construct($errorInfo, int $code = 0, ?\Throwable $previous = null)
+    {
+        $this->errorInfo = (\is_array($errorInfo) ? $errorInfo : [$errorInfo]) + ['message' => ''];
+        parent::__construct($this->errorInfo['message'], $code, $previous);
+    }
 
-   /**
-    * @return mixed[]
-    */
-   public function getError()
-   {
-      return $this->error;
-   }
+    /**
+     * @return mixed[]
+     */
+    public function getError()
+    {
+        return $this->errorInfo;
+    }
 }

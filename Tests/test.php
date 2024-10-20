@@ -6,23 +6,32 @@ require_once '../vendor/autoload.php';
 
 use Inilim\Dump\Dump;
 use Inilim\IPDO\DTO\QueryParamDTO;
+use Inilim\IPDO\IPDOMySQL;
 
 Dump::init();
 
+$db_host = "MySQL-8.2";
+$db_name = "remfy_local";
+$username = "root";
+$password = "";
+$connect = new IPDOMySQL($db_name, $username, $password, $db_host);
+
 // $query1 = 'SELECT * FROM table';
 
-$query1 = 'INSERT INTO tasks (class, method, params, execute_after, created_at)
-                VALUES (:class, :method, :params, :execute_after, :execute_after, :created_at)';
+// $query = 'INSERT INTO tasks (class, method, params, execute_after, created_at)
+// VALUES ({class}, {method}, {params}, {execute_after}, {execute_after}, ({created_at}))';
 
-$query1 = 'INSERT INTO tasks (class, method, params, execute_after, created_at)
-                VALUES (:class, :method, :params, :execute_after, :execute_after, :created_at)';
+$query = 'SELECT * FROM crm_leads_info {class} WHERE {method} {method} info_uid in {info_uid} OR info_uid in {info_uid} LIMIT 10';
 
-$param = new QueryParamDTO($query1, [
-    'class' => 1,
-    'method' => 1,
-    'params' => 1,
-    'execute_after' => 1,
-    'key_not_found' => 'dawkkjawhdlajkhwdjhwdjkj',
-    'created_at' => [1, 2, 3, 4, 5],
-]);
-de($param);
+$values = [
+    'info_uid' => [1, 22, 33, 44, 55],
+    'method' => 'method_kadwld',
+    'class' => 'class_kadwld',
+    'not_found1' => '[1, 22, 33, 44, 55]',
+    'not_found2' => '[1, 22, 33, 44, 55]',
+    'not_found3' => '[1, 22, 33, 44, 55]',
+];
+
+$res = $connect->exec($query, $values, 2);
+
+de($res);

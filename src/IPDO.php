@@ -50,6 +50,8 @@ abstract class IPDO
      * @param int|array<string,mixed> $values
      * @param int $fetch 0 вернуть IPDOResult, 1 вытащить один результат, 2 вытащить все.
      * @return IPDOResult|list<array<string,array<string,string|null|int|float>>>|array<string,string|null|int|float>|array{}
+     * @throws IPDOException
+     * @throws FailedExecuteException
      */
     function exec(
         string $query,
@@ -169,6 +171,7 @@ abstract class IPDO
      */
     protected function run(QueryParamDTO $queryParam, int $fetch)
     {
+        de($queryParam);
         $this->countTouch   = 0;
         $this->lastInsertID = -1;
         return $this->fetchResult(
@@ -201,23 +204,22 @@ abstract class IPDO
             $this->lastStatus = true;
             return $this->mainProccess($queryParam);
         } catch (\Throwable $e) {
-            $this->lastStatus = false;
-            $ee = new FailedExecuteException($e->getMessage());
+            $this->lastStatus  = false;
             $queryParam->query = $this->shortQuery($queryParam->query);
 
+            $errorInfo = [
+                'query_param' => (array)$queryParam,
+            ];
+
             if ($e instanceof IPDOException) {
-                $ee->setError([
-                    'query_param' => (array)$queryParam,
-                    'error'       => $e->getError(),
-                ]);
+                throw new FailedExecuteException($errorInfo + $e->getError());
             } else {
-                $ee->setError([
-                    'query_param'      => (array)$queryParam,
+                throw new FailedExecuteException($errorInfo + [
+                    'message'          => $e->getMessage(),
+                    'code'             => $e->getCode(),
                     'exception_object' => $e,
                 ]);
             }
-
-            throw $ee;
         }
     }
 
@@ -229,24 +231,22 @@ abstract class IPDO
         $this->connectDB();
 
         if ($this->connect === null) {
-            throw new IPDOException('IPDO::connectDB() property "connect" is null');
+            throw new IPDOException([
+                'message' => 'IPDO::connectDB() property "connect" is null',
+            ]);
         }
 
-        // IN OR NOT IN (:item,:item,:item)
-        $this->arrayToIN($queryParam);
-
         // подготовка запроса
+        de($queryParam);
         $stm = $this->connect->prepare($queryParam->query);
 
         if ($stm === false) {
-            $e = new IPDOException('PDO::prepare return false');
-            $e->setError([
-                $e->getMessage(),
+            throw new IPDOException([
+                'message' => 'PDO::prepare return false',
                 'PDO' => [
                     'error_info' => $this->connect->errorInfo(),
                 ],
             ]);
-            throw $e;
         }
 
         // Устанавливаем параметры к запросу
@@ -254,15 +254,13 @@ abstract class IPDO
 
         // выполнить запрос
         if (!$stm->execute()) {
-            $e = new IPDOException('PDOStatement::execute return false');
-            $e->setError([
-                $e->getMessage(),
+            throw new IPDOException([
+                'message' => 'PDOStatement::execute return false',
                 'PDOStatement' => [
                     'error_info'        => $stm->errorInfo(),
                     'debug_dump_params' => $this->getDebugDumpParams($stm),
                 ]
             ]);
-            throw $e;
         }
 
         return $this->defineResult($stm);
@@ -278,62 +276,6 @@ abstract class IPDO
         \ob_start();
         $stm->debugDumpParams();
         return \strval(\ob_get_clean());
-    }
-
-    /**
-     * @throws IPDOException
-     */
-    protected function arrayToIN(QueryParamDTO $queryParam): void
-    {
-        $mark = 'in_item_';
-        $num = \mt_rand(1000, 9999);
-        $queryBefore = $queryParam->query;
-        foreach ($queryParam->values as $nameField => $value) {
-            if (!\is_array($value)) continue;
-
-            if ($this->isMultidimensional($value)) {
-                $e = new IPDOException(\sprintf(
-                    'value by name "%s" multidimensional array',
-                    $nameField
-                ));
-                $e->setError([
-                    $e->getMessage(),
-                    '$nameField' => $nameField,
-                    '$value'     => $value,
-                ]);
-                throw $e;
-            }
-
-            // создаем новые ключи
-            $markKeys = \array_map(static function ($inItem) use (&$queryParam, $mark, &$num) {
-                $newKey = $mark . $num;
-                $queryParam->values[$newKey] = $inItem;
-                $num++;
-                return ':' . $newKey;
-            }, $value);
-
-            $queryParam->query = \preg_replace(
-                '#\([\s\t]*\:' . \preg_quote($nameField) . '[\s\t]*\)#',
-                '(' . \implode(',', $markKeys) . ')',
-                $queryParam->query
-            );
-
-            if ($queryParam->query === null) {
-                $queryParam->query = $queryBefore;
-                $e = new IPDOException(\sprintf(
-                    '%s: preg_replace return null',
-                    __FUNCTION__,
-                ));
-                $e->setError([
-                    '$nameField' => $nameField,
-                    '$markKeys'  => $markKeys,
-                ]);
-                throw $e;
-            }
-
-            $markKeys = [];
-            unset($queryParam->values[$nameField]);
-        }
     }
 
     /**
@@ -422,17 +364,5 @@ abstract class IPDO
         // here string|int|float
         if (\preg_match('#^\-?[1-9][0-9]{0,}$|^0$#', \strval($v))) return true;
         return false;
-    }
-
-    /**
-     * TODO данный метод взят из библиотеки inilim/array
-     * проверка на многомерный массив
-     * true - многомерный
-     * false - одномерный
-     * @param mixed[] $arr
-     */
-    protected function isMultidimensional(array $arr): bool
-    {
-        return (\sizeof($arr) - \sizeof($arr, \COUNT_RECURSIVE)) !== 0;
     }
 }

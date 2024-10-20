@@ -8,6 +8,11 @@
             "Inilim\\IPDO\\": "src/"
         }
     },
+    "autoload-dev": {
+        "psr-4": {
+            "Inilim\\Test\\": "Tests/"
+        }
+    },
     "authors": [
         {
             "name": "inilim"
@@ -20,6 +25,7 @@
     },
     "require-dev": {
         "phpstan/phpstan": "@stable",
-        "inilim/dump": "dev-main"
+        "inilim/dump": "dev-main",
+        "phpunit/phpunit": "^9.6"
     }
 }
