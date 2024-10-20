@@ -171,7 +171,6 @@ abstract class IPDO
      */
     protected function run(QueryParamDTO $queryParam, int $fetch)
     {
-        de($queryParam);
         $this->countTouch   = 0;
         $this->lastInsertID = -1;
         return $this->fetchResult(
@@ -237,7 +236,6 @@ abstract class IPDO
         }
 
         // подготовка запроса
-        de($queryParam);
         $stm = $this->connect->prepare($queryParam->query);
 
         if ($stm === false) {
