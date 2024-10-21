@@ -5,7 +5,8 @@ declare(strict_types=1);
 namespace Inilim\IPDO\DTO;
 
 use Inilim\IPDO\ByteParamDTO;
-use Inilim\IPDO\Exception\IPDOException;
+use Inilim\IPDO\DTO\ByteParamDTO as DTOByteParamDTO;
+use InvalidArgumentException;
 
 /**
  * @psalm-mutation-free
@@ -47,9 +48,9 @@ final class QueryParamDTO
         if (!$hasHoles) {
             // TODO стоит ли ругатся на переданные значения без дырок?
             if ($values) {
-                throw new IPDOException([
-                    'message' => 'Invalid Argument: 0'
-                ]);
+                throw new InvalidArgumentException(\sprintf(
+                    'IPDO: 0',
+                ));
             }
             $this->values = [];
             return;
@@ -80,16 +81,16 @@ final class QueryParamDTO
 
         // TODO стоит ли ругатся на лишние значения?
         if ($sizeBefore !== $sizeAfter) {
-            throw new IPDOException([
-                'message' => \sprintf('Invalid Argument: 1'),
-            ]);
+            throw new InvalidArgumentException(\sprintf(
+                'IPDO: 1',
+            ));
         }
         unset($sizeBefore);
 
         if (!$this->values) {
-            throw new IPDOException([
-                'message' => \sprintf('Invalid Argument: 2'),
-            ]);
+            throw new InvalidArgumentException(\sprintf(
+                'IPDO: 2',
+            ));
         }
 
         // ---------------------------------------------
@@ -97,9 +98,9 @@ final class QueryParamDTO
         // ---------------------------------------------
 
         if ($sizeAfter !== \sizeof($holes)) {
-            throw new IPDOException([
-                'message' => \sprintf('Invalid Argument: 3'),
-            ]);
+            throw new InvalidArgumentException(\sprintf(
+                'IPDO: 3',
+            ));
         }
 
         // ---------------------------------------------
@@ -110,7 +111,13 @@ final class QueryParamDTO
             // INFO переименовка дублей
             if ($repeat > 1) {
                 for ($i = 0; $i < $repeat; $i++) {
+                    // INFO валидируем обьекты
                     if (\is_object($this->values[$name])) {
+                        if (!($this->values[$name] instanceof DTOByteParamDTO)) {
+                            throw new InvalidArgumentException(\sprintf(
+                                'IPDO: 3.1',
+                            ));
+                        }
                         $newName = $this->getNewName();
                         $this->values[$newName] = clone $this->values[$name];
                     }
@@ -134,7 +141,17 @@ final class QueryParamDTO
                     $this->prepareSubValueArrayToInOperator($name);
                 } else {
                     $newName = $this->getNewName();
-                    $this->values[$newName] = $this->values[$name];
+                    // INFO валидируем обьекты
+                    if (\is_object($this->values[$name])) {
+                        if (!($this->values[$name] instanceof DTOByteParamDTO)) {
+                            throw new InvalidArgumentException(\sprintf(
+                                'IPDO: 3.2',
+                            ));
+                        }
+                        $this->values[$newName] = clone $this->values[$name];
+                    } else {
+                        $this->values[$newName] = $this->values[$name];
+                    }
                     $this->query = \str_replace('{' . $name . '}', ' :' . $newName . ' ', $this->query);
                 }
                 unset($this->values[$name]);
@@ -146,20 +163,29 @@ final class QueryParamDTO
     protected function prepareSubValueArrayToInOperator(string $oldName)
     {
         if ($this->isMultidimensional($this->values[$oldName])) {
-            throw new IPDOException([
-                'message' => \sprintf('Invalid Argument: 4'),
-            ]);
+            throw new InvalidArgumentException(\sprintf(
+                'IPDO: 4',
+            ));
         }
         $newHoles = [];
         foreach ($this->values[$oldName] as $subValue) {
             if ($subValue === null) {
-                throw new IPDOException([
-                    'message' => \sprintf('Invalid Argument: 5'),
-                ]);
+                throw new InvalidArgumentException(\sprintf(
+                    'IPDO: 5',
+                ));
             }
             $newName = $this->getNewName();
             $newHoles[] = ' :' . $newName;
-            $this->values[$newName] = \is_object($subValue) ? clone $subValue : $subValue;
+            if (\is_object($subValue)) {
+                if (!($subValue instanceof DTOByteParamDTO)) {
+                    throw new InvalidArgumentException(\sprintf(
+                        'IPDO: 6',
+                    ));
+                }
+                $this->values[$newName] = clone $subValue;
+            } else {
+                $this->values[$newName] = $subValue;
+            }
         } // endforeach
         $this->query = $this->replaceFirst('{' . $oldName . '}', ' ( ' . \implode(',', $newHoles) . ' ) ', $this->query);
     }
@@ -174,9 +200,15 @@ final class QueryParamDTO
     /**
      * @param mixed[] $arr
      */
-    protected function isMultidimensional(array $arr): bool
+    protected function isMultidimensional(array $array): bool
     {
-        return (\sizeof($arr) - \sizeof($arr, \COUNT_RECURSIVE)) !== 0;
+        // not forking if array = "[1, [], 3, 4, 5]"
+        // return (\sizeof($arr) - \sizeof($arr, \COUNT_RECURSIVE)) !== 0;
+
+        // \rsort($arr);
+        // return isset($arr[0]) && \is_array($arr[0]);
+
+        return \sizeof(\array_filter($array, 'is_array')) > 0;
     }
 
     protected function replaceFirst(string $search, string $replace, string $subject): string

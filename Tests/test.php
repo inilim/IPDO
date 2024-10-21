@@ -43,6 +43,24 @@ $values = [
     'item6' => [1, 2, 3, 4, 5],
 ];
 
+$query = '{item1}{item2}{item3}{item4}{item5}{item6}';
+
+// new QueryParamDTO($query, [
+//     'item1' => 1,
+//     'item2' => '2',
+//     'item3' => 3.0,
+//     'item4' => new ByteParamDTO('byte'),
+//     'item5' => true,
+//     'item6' => [1, [], 3, 4, 5],
+// ]);
+
+$arr = [1, [], 3, 4, 5];
+rsort($arr);
+de($arr);
+$a = \sizeof([1, [], 3, 4, 5], \COUNT_RECURSIVE);
+de($a);
+dde((\sizeof([1, [], 3, 4, 5]) - \sizeof([1, [], 3, 4, 5], \COUNT_RECURSIVE)) !== 0);
+
 $res = $connect->exec($query, $values, 2);
 
 de($res);

@@ -9,32 +9,193 @@ use Inilim\IPDO\Exception\IPDOException;
 
 final class QueryParamDTOTest extends TestCase
 {
-    public function tjhfh(): void
+    // public function testQuery(): void
+    // {
+    //     $values = [
+    //         [
+    //             'query' => 'SELECT * FROM test_table WHERE id = {item1} AND statuses IN {item2}',
+    //             'values' => [
+    //                 'item1' => 1,
+    //                 'item2' => [1, 2, 3, 4, 5],
+    //             ],
+    //             'expectingRegex'  => "#SELECT * FROM test_table WHERE id =\s+\:[a-z0-9]{4}\_[0-9]{3,4}\s+AND statuses IN\s+\(\s+(\:[a-z0-9]{4}\_[0-9]{3,4})\s+\)\s+#",
+    //         ],
+    //         [
+    //             'query' => '{item1}{item2}{item3}{item4}{item5}{item6}',
+    //             'values' => [
+    //                 'item1' => 1,
+    //                 'item2' => ['1', '2', '3', '4', '5'],
+    //                 'item3' => 3.0,
+    //                 'item4' => new ByteParamDTO('byte'),
+    //                 'item5' => false,
+    //                 'item6' => ['1', '2', '3', '4', '5'],
+    //             ],
+    //             'expectingOpen'  => 2,
+    //             'expectingClose' => 2,
+    //         ],
+    //         [
+    //             'query' => '{item1}{item2}{item3}{item4}{item5}{item6}{item6}',
+    //             'values' => [
+    //                 'item1' => 1,
+    //                 'item2' => '2',
+    //                 'item3' => 3.0,
+    //                 'item4' => new ByteParamDTO('byte'),
+    //                 'item5' => false,
+    //                 'item6' => ['1', '2', '3', '4', '5'],
+    //             ],
+    //             'expectingOpen'  => 2,
+    //             'expectingClose' => 2,
+    //         ],
+    //         [
+    //             'query' => '{item1}{item2}{item3}{item4}{item5}{item6}{item6}',
+    //             'values' => [
+    //                 'item1' => 1,
+    //                 'item2' => '2',
+    //                 'item3' => 3.0,
+    //                 'item4' => new ByteParamDTO('byte'),
+    //                 'item5' => false,
+    //                 'item6' => ['1', '2', '3', '4', '5'],
+    //             ],
+    //             'expectingOpen'  => 2,
+    //             'expectingClose' => 2,
+    //         ],
+    //     ];
+    // }
+
+    public function testCountBracketsFromQuery(): void
     {
-        $valuesBefore = [
-            'class'         => 1,
-            'method'        => 2,
-            'params'        => 3,
-            'execute_after' => 4,
-            'key_not_found' => 'dawkkjawhdlajkhwdjhwdjkj',
-            'created_at' => [11, 22, 33, 44, 55],
+        $values = [
+            [
+                'query' => '{item1}{item2}{item3}{item4}{item5}{item6}',
+                'values' => [
+                    'item1' => 1,
+                    'item2' => '2',
+                    'item3' => 3.0,
+                    'item4' => new ByteParamDTO('byte'),
+                    'item5' => true,
+                    'item6' => [1, 2, 3, 4, 5],
+                ],
+                'expectingOpen'  => 1,
+                'expectingClose' => 1,
+            ],
+            [
+                'query' => '{item1}{item2}{item3}{item4}{item5}{item6}',
+                'values' => [
+                    'item1' => 1,
+                    'item2' => ['1', '2', '3', '4', '5'],
+                    'item3' => 3.0,
+                    'item4' => new ByteParamDTO('byte'),
+                    'item5' => false,
+                    'item6' => ['1', '2', '3', '4', '5'],
+                ],
+                'expectingOpen'  => 2,
+                'expectingClose' => 2,
+            ],
+            [
+                'query' => '{item1}{item2}{item3}{item4}{item5}{item6}{item6}',
+                'values' => [
+                    'item1' => 1,
+                    'item2' => '2',
+                    'item3' => 3.0,
+                    'item4' => new ByteParamDTO('byte'),
+                    'item5' => false,
+                    'item6' => ['1', '2', '3', '4', '5'],
+                ],
+                'expectingOpen'  => 2,
+                'expectingClose' => 2,
+            ],
+            [
+                'query' => '{item1}{item2}{item3}{item4}{item5}{item6}{item6}',
+                'values' => [
+                    'item1' => 1,
+                    'item2' => '2',
+                    'item3' => 3.0,
+                    'item4' => new ByteParamDTO('byte'),
+                    'item5' => false,
+                    'item6' => ['1', '2', '3', '4', '5'],
+                ],
+                'expectingOpen'  => 2,
+                'expectingClose' => 2,
+            ],
         ];
 
-        $valuesBefore = [
-            'class'         => 1,
-            'method'        => 2,
-            'params'        => 3,
-            'execute_after' => 4,
-            'created_at'    => 11,
+        foreach ($values as $i => $subValues) {
+            $dto = new QueryParamDTO($subValues['query'], $subValues['values']);
+            $this->assertSame(\substr_count($dto->query, '('), $subValues['expectingOpen'], \strval($i));
+            $this->assertSame(\substr_count($dto->query, ')'), $subValues['expectingClose'], \strval($i));
+        }
+    }
+
+    public function testCountHolesFromQuery(): void
+    {
+        $values = [
+            [
+                'query' => '{item1}{item2}{item3}{item4}{item5}{item6}',
+                'values' => [
+                    'item1' => 1,
+                    'item2' => '2',
+                    'item3' => 3.0,
+                    'item4' => new ByteParamDTO('byte'),
+                    'item5' => true,
+                    'item6' => [1, 2, 3, 4, 5],
+                ],
+                'expecting' => 10,
+            ],
+            [
+                'query' => '-- :comment
+                {item1}{item2}{item3}{item4}{item5}{item6}',
+                'values' => [
+                    'item1' => 1,
+                    'item2' => '2',
+                    'item3' => 3.0,
+                    'item4' => new ByteParamDTO('byte'),
+                    'item5' => true,
+                    'item6' => [1, 2, 3, 4, 5],
+                ],
+                'expecting' => 11,
+            ],
+            [
+                'query' => '{item1}{item2}{item3}{item4}{item5}{item6}',
+                'values' => [
+                    'item1' => 1,
+                    'item2' => ['1', '2', '3', '4', '5'],
+                    'item3' => 3.0,
+                    'item4' => new ByteParamDTO('byte'),
+                    'item5' => false,
+                    'item6' => ['1', '2', '3', '4', '5'],
+                ],
+                'expecting' => 14,
+            ],
+            [
+                'query' => '{item1}{item2}{item3}{item4}{item5}{item6}{item6}',
+                'values' => [
+                    'item1' => 1,
+                    'item2' => '2',
+                    'item3' => 3.0,
+                    'item4' => new ByteParamDTO('byte'),
+                    'item5' => false,
+                    'item6' => ['1', '2', '3', '4', '5'],
+                ],
+                'expecting' => 15,
+            ],
+            [
+                'query' => '{item1}{item2}{item3}{item4}{item5}{item5}{item6}',
+                'values' => [
+                    'item1' => 1,
+                    'item2' => '2',
+                    'item3' => 3.0,
+                    'item4' => new ByteParamDTO('byte'),
+                    'item5' => false,
+                    'item6' => ['1', '2', '3', '4', '5'],
+                ],
+                'expecting' => 11,
+            ],
         ];
 
-        $query = 'INSERT INTO tasks (class, method, params, execute_after, created_at)
-                VALUES ({class}, {method}, {params}, {execute_after}, {execute_after}, ({created_at}))';
-
-        $dto = new QueryParamDTO($query, $valuesBefore);
-
-
-        $this->assertSame($dto->values, $valuesBefore);
+        foreach ($values as $i => $subValues) {
+            $dto = new QueryParamDTO($subValues['query'], $subValues['values']);
+            $this->assertSame(\substr_count($dto->query, ':'), $subValues['expecting'], \strval($i));
+        }
     }
 
     public function testCountValuesAfterPrepare(): void
@@ -90,21 +251,15 @@ final class QueryParamDTOTest extends TestCase
             ],
         ];
 
-        foreach ($values as $subValues) {
+        foreach ($values as $i => $subValues) {
             $dto = new QueryParamDTO($subValues['query'], $subValues['values']);
-            $this->assertSame(\sizeof($dto->values), $subValues['expecting']);
+            $this->assertSame(\sizeof($dto->values), $subValues['expecting'], \strval($i));
         }
     }
 
-    // public function testQueryAfterPrepare(): void
-    // {
-
-    // }
-
-
     public function testBadParamsMultiValue(): void
     {
-        $this->expectException(IPDOException::class);
+        $this->expectException(\InvalidArgumentException::class);
 
         $query = '{item1}{item2}{item3}{item4}{item5}{item6}';
 
@@ -118,9 +273,57 @@ final class QueryParamDTOTest extends TestCase
         ]);
     }
 
+    public function testBadParamsBadObj(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+
+        $query = '{item1}{item2}{item3}{item4}{item5}{item6}';
+
+        new QueryParamDTO($query, [
+            'item1' => 1,
+            'item2' => '2',
+            'item3' => 3.0,
+            'item4' => new \stdClass,
+            'item5' => true,
+            'item6' => [1, 2, 3, 4, 5],
+        ]);
+    }
+
+    public function testBadParamsMultiValueBadObj(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+
+        $query = '{item1}{item2}{item3}{item4}{item5}{item6}';
+
+        new QueryParamDTO($query, [
+            'item1' => 1,
+            'item2' => '2',
+            'item3' => 3.0,
+            'item4' => new ByteParamDTO('byte'),
+            'item5' => true,
+            'item6' => [1, new \stdClass, 3, 4, 5],
+        ]);
+    }
+
+    public function testBadParamsMultiValueEmpty(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+
+        $query = '{item1}{item2}{item3}{item4}{item5}{item6}';
+
+        new QueryParamDTO($query, [
+            'item1' => 1,
+            'item2' => '2',
+            'item3' => 3.0,
+            'item4' => new ByteParamDTO('byte'),
+            'item5' => true,
+            'item6' => [1, [], 3, 4, 5],
+        ]);
+    }
+
     public function testBadParamsEmptyValues(): void
     {
-        $this->expectException(IPDOException::class);
+        $this->expectException(\InvalidArgumentException::class);
 
         $query = '{item1}{item2}{item3}{item4}{item5}{item6}';
 
@@ -129,7 +332,7 @@ final class QueryParamDTOTest extends TestCase
 
     public function testBadParamsNotFoundValueFromQuery(): void
     {
-        $this->expectException(IPDOException::class);
+        $this->expectException(\InvalidArgumentException::class);
 
         $query = '{item1}{item2}{item3}{item4}{item5}';
 
@@ -145,7 +348,7 @@ final class QueryParamDTOTest extends TestCase
 
     public function testBadParamsEmptyHolesFromQuery(): void
     {
-        $this->expectException(IPDOException::class);
+        $this->expectException(\InvalidArgumentException::class);
 
         $query = '';
 
@@ -161,7 +364,7 @@ final class QueryParamDTOTest extends TestCase
 
     public function testBadParamsNotFoundValueFromValues(): void
     {
-        $this->expectException(IPDOException::class);
+        $this->expectException(\InvalidArgumentException::class);
 
         $query = '{item1}{item2}{item3}{item4}{item5}{item6}';
 
@@ -176,7 +379,7 @@ final class QueryParamDTOTest extends TestCase
 
     public function testBadParamsInNullGiven(): void
     {
-        $this->expectException(IPDOException::class);
+        $this->expectException(\InvalidArgumentException::class);
 
         $query = '{item1}{item2}{item3}{item4}{item5}{item6}';
 

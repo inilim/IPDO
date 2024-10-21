@@ -12,6 +12,10 @@ use Inilim\IPDO\DTO\QueryParamDTO;
 use Inilim\IPDO\Exception\IPDOException;
 use Inilim\IPDO\Exception\FailedExecuteException;
 
+/**
+ * @psalm-import-type Param from QueryParamDTO
+ * @psalm-import-type ParamIN from QueryParamDTO
+ */
 abstract class IPDO
 {
     const FETCH_ALL         = 2;
@@ -47,10 +51,10 @@ abstract class IPDO
 
     /**
      * выполнить запрос
-     * @param int|array<string,mixed> $values
+     * @param int|Param|ParamIN[] $values
      * @param int $fetch 0 вернуть IPDOResult, 1 вытащить один результат, 2 вытащить все.
      * @return IPDOResult|list<array<string,array<string,string|null|int|float>>>|array<string,string|null|int|float>|array{}
-     * @throws IPDOException
+     * @throws \InvalidArgumentException
      * @throws FailedExecuteException
      */
     function exec(
@@ -62,7 +66,14 @@ abstract class IPDO
             $fetch  = $values;
             $values = [];
         }
-        return $this->run(new QueryParamDTO($query, $values), $fetch);
+
+        $this->lastStatus   = true;
+        $this->countTouch   = 0;
+        $this->lastInsertID = -1;
+        return $this->fetchResult(
+            $this->tryProcess(new QueryParamDTO($query, $values)),
+            $fetch
+        );
     }
 
     /**
@@ -167,19 +178,6 @@ abstract class IPDO
     // ---------------------------------------------
 
     /**
-     * @return IPDOResult|list<array<string,array<string,string|null|int|float>>>|array<string,string|null|int|float>|array{}
-     */
-    protected function run(QueryParamDTO $queryParam, int $fetch)
-    {
-        $this->countTouch   = 0;
-        $this->lastInsertID = -1;
-        return $this->fetchResult(
-            $this->tryMainProccess($queryParam),
-            $fetch
-        );
-    }
-
-    /**
      * TODO fetch и fetchAll могут выбрасить исключение нужно это отловить
      * @return IPDOResult|list<array<string,array<string,string|null|int|float>>>|array<string,string|null|int|float>|array{}
      */
@@ -197,11 +195,10 @@ abstract class IPDO
         return $result;
     }
 
-    protected function tryMainProccess(QueryParamDTO $queryParam): IPDOResult
+    protected function tryProcess(QueryParamDTO $queryParam): IPDOResult
     {
         try {
-            $this->lastStatus = true;
-            return $this->mainProccess($queryParam);
+            return $this->process($queryParam);
         } catch (\Throwable $e) {
             $this->lastStatus  = false;
             $queryParam->query = $this->shortQuery($queryParam->query);
@@ -225,7 +222,7 @@ abstract class IPDO
     /**
      * @throws IPDOException
      */
-    protected function mainProccess(QueryParamDTO $queryParam): IPDOResult
+    protected function process(QueryParamDTO $queryParam): IPDOResult
     {
         $this->connectDB();
 
@@ -294,10 +291,8 @@ abstract class IPDO
             } elseif ($val === null) {
                 $stm->bindParam($mask, $val, PDO::PARAM_NULL);
             } elseif (\is_object($val)) {
-                if ($val instanceof ByteParamDTO) {
-                    $val = $val->getValue();
-                    $stm->bindParam($mask, $val, PDO::PARAM_LOB);
-                }
+                $val = $val->getValue();
+                $stm->bindParam($mask, $val, PDO::PARAM_LOB);
             } else {
                 $val = \strval($val);
                 $stm->bindParam($mask, $val, PDO::PARAM_STR);
