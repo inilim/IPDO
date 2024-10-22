@@ -16,6 +16,9 @@
     "authors": [
         {
             "name": "inilim"
+        },
+        {
+            "name": "Web community"
         }
     ],
     "minimum-stability": "stable",

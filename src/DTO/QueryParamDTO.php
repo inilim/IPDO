@@ -4,8 +4,7 @@ declare(strict_types=1);
 
 namespace Inilim\IPDO\DTO;
 
-use Inilim\IPDO\ByteParamDTO;
-use Inilim\IPDO\DTO\ByteParamDTO as DTOByteParamDTO;
+use Inilim\IPDO\DTO\ByteParamDTO;
 use InvalidArgumentException;
 
 /**
@@ -113,7 +112,7 @@ final class QueryParamDTO
                 for ($i = 0; $i < $repeat; $i++) {
                     // INFO валидируем обьекты
                     if (\is_object($this->values[$name])) {
-                        if (!($this->values[$name] instanceof DTOByteParamDTO)) {
+                        if (!($this->values[$name] instanceof ByteParamDTO)) {
                             throw new InvalidArgumentException(\sprintf(
                                 'IPDO: 3.1',
                             ));
@@ -143,7 +142,7 @@ final class QueryParamDTO
                     $newName = $this->getNewName();
                     // INFO валидируем обьекты
                     if (\is_object($this->values[$name])) {
-                        if (!($this->values[$name] instanceof DTOByteParamDTO)) {
+                        if (!($this->values[$name] instanceof ByteParamDTO)) {
                             throw new InvalidArgumentException(\sprintf(
                                 'IPDO: 3.2',
                             ));
@@ -175,9 +174,9 @@ final class QueryParamDTO
                 ));
             }
             $newName = $this->getNewName();
-            $newHoles[] = ' :' . $newName;
+            $newHoles[] = ':' . $newName;
             if (\is_object($subValue)) {
-                if (!($subValue instanceof DTOByteParamDTO)) {
+                if (!($subValue instanceof ByteParamDTO)) {
                     throw new InvalidArgumentException(\sprintf(
                         'IPDO: 6',
                     ));
@@ -198,15 +197,15 @@ final class QueryParamDTO
     }
 
     /**
-     * @param mixed[] $arr
+     * @param mixed[] $array
      */
     protected function isMultidimensional(array $array): bool
     {
         // not forking if array = "[1, [], 3, 4, 5]"
-        // return (\sizeof($arr) - \sizeof($arr, \COUNT_RECURSIVE)) !== 0;
+        // return (\sizeof($array) - \sizeof($array, \COUNT_RECURSIVE)) !== 0;
 
-        // \rsort($arr);
-        // return isset($arr[0]) && \is_array($arr[0]);
+        // \rsort($array);
+        // return isset($array[0]) && \is_array($array[0]);
 
         return \sizeof(\array_filter($array, 'is_array')) > 0;
     }
