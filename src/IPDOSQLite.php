@@ -29,10 +29,12 @@ class IPDOSQLite extends IPDO
       if ($this->connect !== null) return;
 
       if ($this->nameDB !== ':memory:' && !\is_file($this->nameDB)) {
-         throw new IPDOException(\sprintf(
-            'IPDO: File not found "%s"',
-            $this->nameDB,
-         ));
+         throw new IPDOException([
+            'message' => \sprintf(
+               'IPDO: File not found "%s"',
+               $this->nameDB,
+            ),
+         ]);
       }
 
       $this->countConnect++;
