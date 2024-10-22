@@ -168,6 +168,12 @@ abstract class IPDO
         return $this->connect->inTransaction();
     }
 
+    function setPDO(PDO $pdo): self
+    {
+        $this->connect = $pdo;
+        return $this;
+    }
+
     // ---------------------------------------------
     // ---------------------------------------------
     // ---------------------------------------------

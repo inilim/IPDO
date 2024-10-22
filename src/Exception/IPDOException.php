@@ -14,7 +14,7 @@ class IPDOException extends \Exception
     function __construct($errorInfo, int $code = 0, ?\Throwable $previous = null)
     {
         $this->errorInfo = (\is_array($errorInfo) ? $errorInfo : [$errorInfo]) + ['message' => ''];
-        parent::__construct($this->errorInfo['message'], $code, $previous);
+        parent::__construct(\strval($this->errorInfo['message']), $code, $previous);
     }
 
     /**
