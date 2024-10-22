@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Inilim\IPDO;
 
 use Inilim\IPDO\IPDO;
-use Inilim\IPDO\Exception\SQLiteNotFoundFileException;
+use Inilim\IPDO\Exception\IPDOException;
 
 class IPDOSQLite extends IPDO
 {
@@ -21,7 +21,7 @@ class IPDOSQLite extends IPDO
 
    /**
     * В момент создания PDO может выбросить исключение \PDOException
-    * @throws SQLiteNotFoundFileException
+    * @throws IPDOException
     * @throws \PDOException
     */
    protected function connectDB(): void
@@ -29,8 +29,8 @@ class IPDOSQLite extends IPDO
       if ($this->connect !== null) return;
 
       if ($this->nameDB !== ':memory:' && !\is_file($this->nameDB)) {
-         throw new SQLiteNotFoundFileException(\sprintf(
-            'File not found "%s"',
+         throw new IPDOException(\sprintf(
+            'IPDO: File not found "%s"',
             $this->nameDB,
          ));
       }

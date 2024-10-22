@@ -10,7 +10,6 @@ use Inilim\IPDO\IPDOResult;
 use Inilim\IPDO\DTO\ByteParamDTO;
 use Inilim\IPDO\DTO\QueryParamDTO;
 use Inilim\IPDO\Exception\IPDOException;
-use Inilim\IPDO\Exception\FailedExecuteException;
 
 /**
  * @psalm-import-type Param from QueryParamDTO
@@ -55,7 +54,7 @@ abstract class IPDO
      * @param int $fetch 0 вернуть IPDOResult, 1 вытащить один результат, 2 вытащить все.
      * @return IPDOResult|list<array<string,array<string,string|null|int|float>>>|array<string,string|null|int|float>|array{}
      * @throws \InvalidArgumentException
-     * @throws FailedExecuteException
+     * @throws IPDOException
      */
     function exec(
         string $query,
@@ -208,9 +207,9 @@ abstract class IPDO
             ];
 
             if ($e instanceof IPDOException) {
-                throw new FailedExecuteException($errorInfo + $e->getError());
+                throw new IPDOException($errorInfo + $e->getError());
             } else {
-                throw new FailedExecuteException($errorInfo + [
+                throw new IPDOException($errorInfo + [
                     'message'          => $e->getMessage(),
                     'code'             => $e->getCode(),
                     'exception_object' => $e,
