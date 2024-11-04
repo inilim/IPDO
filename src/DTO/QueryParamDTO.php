@@ -21,7 +21,7 @@ final class QueryParamDTO
 
     public string $query;
     /**
-     * @var array<string,Param|ParamIN[]>
+     * @var array<string,Param>
      */
     public array $values;
 
@@ -74,9 +74,9 @@ final class QueryParamDTO
         // INFO берем только те ключи что есть в запросе
         // ---------------------------------------------
 
-        $sizeBefore = \sizeof($this->values);
+        $sizeBefore   = \sizeof($this->values);
         $this->values = \array_intersect_key($this->values, $holes);
-        $sizeAfter = \sizeof($this->values);
+        $sizeAfter    = \sizeof($this->values);
 
         // TODO стоит ли ругатся на лишние значения?
         if ($sizeBefore !== $sizeAfter) {
@@ -201,12 +201,6 @@ final class QueryParamDTO
      */
     protected function isMultidimensional(array $array): bool
     {
-        // not forking if array = "[1, [], 3, 4, 5]"
-        // return (\sizeof($array) - \sizeof($array, \COUNT_RECURSIVE)) !== 0;
-
-        // \rsort($array);
-        // return isset($array[0]) && \is_array($array[0]);
-
         return \sizeof(\array_filter($array, 'is_array')) > 0;
     }
 

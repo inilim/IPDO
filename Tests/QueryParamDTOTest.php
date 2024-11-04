@@ -113,19 +113,6 @@ final class QueryParamDTOTest extends TestCase
                 'expectingOpen'  => 2,
                 'expectingClose' => 2,
             ],
-            [
-                'query' => '{item1}{item2}{item3}{item4}{item5}{item6}{item6}',
-                'values' => [
-                    'item1' => 1,
-                    'item2' => '2',
-                    'item3' => 3.0,
-                    'item4' => new ByteParamDTO('byte'),
-                    'item5' => false,
-                    'item6' => ['1', '2', '3', '4', '5'],
-                ],
-                'expectingOpen'  => 2,
-                'expectingClose' => 2,
-            ],
         ];
 
         foreach ($values as $i => $subValues) {
