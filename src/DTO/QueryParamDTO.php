@@ -186,7 +186,7 @@ final class QueryParamDTO
                 $this->values[$newName] = $subValue;
             }
         } // endforeach
-        $this->query = $this->replaceFirst('{' . $oldName . '}', ' ( ' . \implode(',', $newHoles) . ' ) ', $this->query);
+        $this->query = $this->replaceFirst('{' . $oldName . '}', ' ' . \implode(',', $newHoles) . ' ', $this->query);
     }
 
     protected function getNewName(): string

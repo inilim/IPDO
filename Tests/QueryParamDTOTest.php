@@ -19,14 +19,12 @@ final class QueryParamDTOTest extends TestCase
                     'item1' => 1,
                     'item2' => [1, 2, 3],
                 ],
-                // ' :78f8_319  ( :78f8_320, :78f8_321, :78f8_322 ) '
+                // ' :78f8_319  :78f8_320, :78f8_321, :78f8_322 '
                 'expectingRegex'  => '#^' . self::REGEX_SPACE .
                     // ::***_****
                     '\:[a-z\d]{4}\_\d{3,4}' . self::REGEX_SPACE .
-                    '\(' . self::REGEX_SPACE .
-                    // ( :***_****,:***_****:***_**** )
+                    //  :***_****,:***_****:***_**** 
                     '\:[a-z\d]{4}\_\d{3,4},\:[a-z\d]{4}\_\d{3,4},\:[a-z\d]{4}\_\d{3,4}' . self::REGEX_SPACE .
-                    '\)' . self::REGEX_SPACE .
                     '$#',
             ],
         ];
@@ -69,57 +67,6 @@ final class QueryParamDTOTest extends TestCase
         $dto = new QueryParamDTO($query, $values);
         $this->assertNotSame(strpos($dto->query, '{') !== false, true);
         $this->assertNotSame(strpos($dto->query, '}') !== false, true);
-    }
-
-    public function testCountBracketsFromQuery(): void
-    {
-        $values = [
-            [
-                'query' => '{item1}{item2}{item3}{item4}{item5}{item6}',
-                'values' => [
-                    'item1' => 1,
-                    'item2' => '2',
-                    'item3' => 3.0,
-                    'item4' => new ByteParamDTO('byte'),
-                    'item5' => true,
-                    'item6' => [1, 2, 3, 4, 5],
-                ],
-                'expectingOpen'  => 1,
-                'expectingClose' => 1,
-            ],
-            [
-                'query' => '{item1}{item2}{item3}{item4}{item5}{item6}',
-                'values' => [
-                    'item1' => 1,
-                    'item2' => ['1', '2', '3', '4', '5'],
-                    'item3' => 3.0,
-                    'item4' => new ByteParamDTO('byte'),
-                    'item5' => false,
-                    'item6' => ['1', '2', '3', '4', '5'],
-                ],
-                'expectingOpen'  => 2,
-                'expectingClose' => 2,
-            ],
-            [
-                'query' => '{item1}{item2}{item3}{item4}{item5}{item6}{item6}',
-                'values' => [
-                    'item1' => 1,
-                    'item2' => '2',
-                    'item3' => 3.0,
-                    'item4' => new ByteParamDTO('byte'),
-                    'item5' => false,
-                    'item6' => ['1', '2', '3', '4', '5'],
-                ],
-                'expectingOpen'  => 2,
-                'expectingClose' => 2,
-            ],
-        ];
-
-        foreach ($values as $i => $subValues) {
-            $dto = new QueryParamDTO($subValues['query'], $subValues['values']);
-            $this->assertSame(\substr_count($dto->query, '('), $subValues['expectingOpen'], \strval($i));
-            $this->assertSame(\substr_count($dto->query, ')'), $subValues['expectingClose'], \strval($i));
-        }
     }
 
     public function testCountHolesFromQuery(): void
