@@ -35,6 +35,41 @@ final class QueryParamDTOTest extends TestCase
         }
     }
 
+    public function test_count_commas_after_prepare(): void
+    {
+        $values = [
+            [
+                'query' => '{item1}{item2}{item3}{item4}{item5}{item6}',
+                'values' => [
+                    'item1' => 1,
+                    'item2' => '2',
+                    'item3' => 3.0,
+                    'item4' => new ByteParamDTO('byte'),
+                    'item5' => true,
+                    'item6' => [1, 2, 3, 4, 5],
+                ],
+                'expecting' => 4,
+            ],
+            [
+                'query' => '{item1}{item2}{item3}{item4}{item5}{item6}',
+                'values' => [
+                    'item1' => 1,
+                    'item2' => ['1', '2'],
+                    'item3' => 3.0,
+                    'item4' => new ByteParamDTO('byte'),
+                    'item5' => false,
+                    'item6' => ['1', '2', '3', '4', '5'],
+                ],
+                'expecting' => 5,
+            ],
+        ];
+
+        foreach ($values as $i => $subValues) {
+            $dto = new QueryParamDTO($subValues['query'], $subValues['values']);
+            $this->assertSame(\substr_count($dto->query, ','), $subValues['expecting'], \strval($i));
+        }
+    }
+
     public function testAbsenceOfCurlyBraces(): void
     {
         $query = '{item1}{item2} {item3} {item4}{item5}{item6}';
