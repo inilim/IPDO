@@ -17,10 +17,10 @@ use Inilim\IPDO\Exception\IPDOException;
  */
 abstract class IPDO
 {
-    const FETCH_ALL         = 2;
-    const FETCH_ONCE        = 1;
-    const FETCH_IPDO_RESULT = 0;
-    const LEN_SQL           = 500;
+    const FETCH_ALL         = 2,
+        FETCH_ONCE        = 1,
+        FETCH_IPDO_RESULT = 0,
+        LEN_SQL           = 500;
 
     protected string $host;
     protected string $nameDB;
@@ -51,8 +51,16 @@ abstract class IPDO
     /**
      * выполнить запрос
      * @param int|Param|ParamIN[] $values
-     * @param int $fetch 0 вернуть IPDOResult, 1 вытащить один результат, 2 вытащить все.
-     * @return IPDOResult|list<array<string,array<string,string|null|int|float>>>|array<string,string|null|int|float>|array{}
+     * @param self::FETCH_* $fetch 0 вернуть IPDOResult, 1 вытащить один результат, 2 вытащить все.
+     * @return ($fetch is 0
+     *      ? IPDOResult
+     *      : (
+     *              $fetch is 1
+     *                  ? array<string,string|null|int|float>
+     *                  : list<array<string,string|null|int|float>>
+     *        )
+     * )
+     * 
      * @throws \InvalidArgumentException
      * @throws IPDOException
      */
