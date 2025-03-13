@@ -94,8 +94,9 @@ abstract class IPDO
 
     /**
      * закрыть соединение с базой
+     * @return void
      */
-    function close(): void
+    function close()
     {
         $this->connect = null;
     }
@@ -129,8 +130,9 @@ abstract class IPDO
 
     /**
      * @throws \PDOException
+     * @return void
      */
-    function connect(): void
+    function connect()
     {
         if ($this->connect === null) $this->connectDB();
     }
@@ -153,7 +155,10 @@ abstract class IPDO
         return true;
     }
 
-    function rollBack(): void
+    /**
+     * @return void
+     */
+    function rollBack()
     {
         if ($this->connect === null) return;
         if ($this->inTransaction()) {
@@ -168,6 +173,29 @@ abstract class IPDO
             return $this->connect->commit();
         }
         return false;
+    }
+
+    /**
+     * @param \Closure(self) $callable
+     * @return void
+     */
+    function transaction(\Closure $callable)
+    {
+        $this->connectDB();
+        if (!$this->begin()) {
+            throw new IPDOException([
+                'message' => 'Begin failed',
+            ]);
+        }
+
+        $callable->__invoke($this);
+
+        if (!$this->commit()) {
+            $this->rollBack();
+            throw new IPDOException([
+                'message' => 'Commit failed',
+            ]);
+        }
     }
 
     function inTransaction(): bool
@@ -288,8 +316,9 @@ abstract class IPDO
 
     /**
      * @param PDOStatement $stm
+     * @return void
      */
-    protected function setBindParams(PDOStatement $stm, QueryParamDTO $queryParam): void
+    protected function setBindParams(PDOStatement $stm, QueryParamDTO $queryParam)
     {
         //$v = [];# массив для отладки
         // &$val требование от bindParam https://www.php.net/manual/ru/pdostatement.bindparam.php#98145
