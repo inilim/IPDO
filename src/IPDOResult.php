@@ -13,7 +13,7 @@ final class IPDOResult
    protected int $countTouch;
    protected int $lastInsertID;
 
-   public function __construct(
+   function __construct(
       \PDOStatement $statement,
       int $countTouch,
       int $lastInsertID
@@ -23,17 +23,17 @@ final class IPDOResult
       $this->lastInsertID = $lastInsertID;
    }
 
-   public function getStatement(): \PDOStatement
+   function getStatement(): \PDOStatement
    {
       return $this->statement;
    }
 
-   public function getCountTouch(): int
+   function getCountTouch(): int
    {
       return $this->countTouch;
    }
 
-   public function getLastInsertID(): int
+   function getLastInsertID(): int
    {
       return $this->lastInsertID;
    }

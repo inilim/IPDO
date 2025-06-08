@@ -17,7 +17,7 @@ use Inilim\IPDO\Exception\IPDOException;
  */
 abstract class IPDO
 {
-    const FETCH_ALL         = 2,
+    const FETCH_ALL       = 2,
         FETCH_ONCE        = 1,
         FETCH_IPDO_RESULT = 0,
         LEN_SQL           = 500;
@@ -88,15 +88,40 @@ abstract class IPDO
      */
     function status(): bool
     {
-        if ($this->connect === null) return false;
+        if ($this->connect === null) {
+            return false;
+        }
         return $this->lastStatus;
     }
 
     /**
-     * закрыть соединение с базой
-     * @return void
+     * @return array<int|string,mixed>
      */
-    function close()
+    function getOptions(): array
+    {
+        return $this->options;
+    }
+
+    function getNameDb(): string
+    {
+        return $this->nameDB;
+    }
+
+    function getPDO(): ?PDO
+    {
+        return $this->connect;
+    }
+
+    function setPDO(PDO $pdo): self
+    {
+        $this->connect = $pdo;
+        return $this;
+    }
+
+    /**
+     * закрыть соединение с базой
+     */
+    function close(): void
     {
         $this->connect = null;
     }
@@ -106,7 +131,9 @@ abstract class IPDO
      */
     function involved(): int
     {
-        if ($this->connect === null) return -1;
+        if ($this->connect === null) {
+            return -1;
+        }
         return $this->countTouch;
     }
 
@@ -124,17 +151,20 @@ abstract class IPDO
      */
     function getLastInsertID(): int
     {
-        if ($this->connect === null) return -1;
+        if ($this->connect === null) {
+            return -1;
+        }
         return $this->lastInsertID;
     }
 
     /**
      * @throws \PDOException
-     * @return void
      */
-    function connect()
+    function connect(): void
     {
-        if ($this->connect === null) $this->connectDB();
+        if ($this->connect === null) {
+            $this->connectDB();
+        }
     }
 
     function hasConnect(): bool
@@ -147,7 +177,9 @@ abstract class IPDO
      */
     function begin(): bool
     {
-        if ($this->connect === null) return false;
+        if ($this->connect === null) {
+            return false;
+        }
         if ($this->connect->inTransaction()) {
             return false;
         }
@@ -155,12 +187,11 @@ abstract class IPDO
         return true;
     }
 
-    /**
-     * @return void
-     */
-    function rollBack()
+    function rollBack(): void
     {
-        if ($this->connect === null) return;
+        if ($this->connect === null) {
+            return;
+        }
         if ($this->inTransaction()) {
             $this->connect->rollBack();
         }
@@ -168,7 +199,9 @@ abstract class IPDO
 
     function commit(): bool
     {
-        if ($this->connect === null) return false;
+        if ($this->connect === null) {
+            return false;
+        }
         if ($this->inTransaction()) {
             return $this->connect->commit();
         }
@@ -177,9 +210,8 @@ abstract class IPDO
 
     /**
      * @param \Closure(self) $callable
-     * @return void
      */
-    function transaction(\Closure $callable)
+    function transaction(\Closure $callable): void
     {
         $this->connectDB();
         if (!$this->begin()) {
@@ -200,14 +232,10 @@ abstract class IPDO
 
     function inTransaction(): bool
     {
-        if ($this->connect === null) return false;
+        if ($this->connect === null) {
+            return false;
+        }
         return $this->connect->inTransaction();
-    }
-
-    function setPDO(PDO $pdo): self
-    {
-        $this->connect = $pdo;
-        return $this;
     }
 
     // ---------------------------------------------
@@ -353,9 +381,13 @@ abstract class IPDO
 
     protected function defineLastInsertID(): int
     {
-        if ($this->connect === null) return -1;
+        if ($this->connect === null) {
+            return -1;
+        }
         $id = $this->connect->lastInsertId();
-        if ($this->isNumeric($id)) return \intval($id);
+        if ($this->isNumeric($id)) {
+            return \intval($id);
+        }
         // lastInsertId может вернуть строку, представляющую последнее значение
         return -1;
     }
@@ -374,7 +406,7 @@ abstract class IPDO
     }
 
     /**
-     * TODO данный метод взят из библиотеки inilim/integer
+     * TODO данный метод взят из библиотеки inilim/tools
      * проверка int для php, 32bit или 64bit
      * может ли значение стать integer без изменений
      * @param mixed $v
@@ -383,14 +415,16 @@ abstract class IPDO
     {
         if ($this->isNumeric($v)) {
             /** @var string $v */
-            if (\strval(\intval($v)) === \strval($v)) return true;
+            if (\strval(\intval($v)) === \strval($v)) {
+                return true;
+            }
             return false;
         }
         return false;
     }
 
     /**
-     * TODO данный метод взят из библиотеки inilim/integer
+     * TODO данный метод взят из библиотеки inilim/tools
      * @param mixed $v
      */
     protected function isNumeric($v): bool

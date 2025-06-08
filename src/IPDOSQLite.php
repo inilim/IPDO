@@ -13,7 +13,7 @@ class IPDOSQLite extends IPDO
     * @param string $pathToFile "path/to/file" OR ":memory:"
     * @param array<int|string,mixed> $options
     */
-   public function __construct(string $pathToFile, array $options = [])
+   function __construct(string $pathToFile, array $options = [])
    {
       $this->nameDB  = $pathToFile;
       $this->options = $options;

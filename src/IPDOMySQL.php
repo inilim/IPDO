@@ -13,7 +13,7 @@ class IPDOMySQL extends IPDO
    /**
     * @param array<int|string,mixed> $options
     */
-   public function __construct(
+   function __construct(
       string $nameDB,
       string $login,
       string $password,
