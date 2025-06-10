@@ -26,7 +26,9 @@ class IPDOSQLite extends IPDO
     */
    protected function connectDB(): void
    {
-      if ($this->connect !== null) return;
+      if ($this->connect !== null) {
+         return;
+      }
 
       if ($this->nameDB !== ':memory:' && !\is_file($this->nameDB)) {
          throw new IPDOException([

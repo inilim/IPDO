@@ -429,9 +429,13 @@ abstract class IPDO
      */
     protected function isNumeric($v): bool
     {
-        if (!\is_scalar($v) || \is_bool($v)) return false;
+        if (!\is_scalar($v) || \is_bool($v)) {
+            return false;
+        }
         // here string|int|float
-        if (\preg_match('#^\-?[1-9][0-9]{0,}$|^0$#', \strval($v))) return true;
+        if (\preg_match('#^\-?[1-9][0-9]{0,}$|^0$#', \strval($v))) {
+            return true;
+        }
         return false;
     }
 }
