@@ -20,6 +20,14 @@ class IPDOSQLite extends IPDO
    }
 
    /**
+    * get version sqlite
+    */
+   function getVersion(): string
+   {
+      return \strval($this->exec('SELECT sqlite_version() AS ver', 1)['ver']);
+   }
+
+   /**
     * В момент создания PDO может выбросить исключение \PDOException
     * @throws IPDOException
     * @throws \PDOException
