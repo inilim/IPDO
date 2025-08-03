@@ -45,10 +45,9 @@ final class QueryParamDTO
         // ---------------------------------------------
 
         if (!$hasHoles) {
-            // TODO стоит ли ругатся на переданные значения без дырок?
             if ($values) {
                 throw new InvalidArgumentException(\sprintf(
-                    'IPDO: 0',
+                    'IPDO: Passing parameters without a conversion specifier in a request',
                 ));
             }
             $this->values = [];
@@ -78,10 +77,9 @@ final class QueryParamDTO
         $this->values = \array_intersect_key($this->values, $holes);
         $sizeAfter    = \sizeof($this->values);
 
-        // TODO стоит ли ругатся на лишние значения?
         if ($sizeBefore !== $sizeAfter) {
             throw new InvalidArgumentException(\sprintf(
-                'IPDO: 1',
+                'IPDO: The number of parameters differs from the conversion specifier in the request.',
             ));
         }
         unset($sizeBefore);
@@ -201,12 +199,19 @@ final class QueryParamDTO
      */
     protected function isMultidimensional(array $array): bool
     {
-        return \sizeof(\array_filter($array, 'is_array')) > 0;
+        foreach ($array as $item) {
+            if (\is_array($item)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     protected function replaceFirst(string $search, string $replace, string $subject): string
     {
-        if ($search === '') return $subject;
+        if ($search === '') {
+            return $subject;
+        }
         $position = \strpos($subject, $search);
         if ($position !== false) {
             return \substr_replace($subject, $replace, $position, \strlen($search));
