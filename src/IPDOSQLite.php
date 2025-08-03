@@ -47,6 +47,12 @@ class IPDOSQLite extends IPDO
          ]);
       }
 
+      if (!self::extensionLoaded()) {
+         throw new IPDOException([
+            'message' => 'IPDO: Extensoin not loaded "pdo_sqlite"',
+         ]);
+      }
+
       $this->countConnect++;
       $this->connect = new \PDO(
          'sqlite:' . $this->nameDB,
@@ -54,5 +60,14 @@ class IPDOSQLite extends IPDO
          null,
          $this->options
       );
+   }
+
+   // ---------------------------------------------
+   // 
+   // ---------------------------------------------
+
+   static function extensionLoaded(): bool
+   {
+      return \extension_loaded('pdo_sqlite');
    }
 }
