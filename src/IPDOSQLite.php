@@ -28,6 +28,53 @@ class IPDOSQLite extends IPDO
    }
 
    /**
+    * @return (array{type:string,name:string,tbl_name:string,rootpage:int,sql:string})[]
+    */
+   function master(?string $type = null, ?string $name = null, ?string $tblName = null): array
+   {
+      $opts  = [];
+      $where = [];
+
+      if ($type) {
+         $opts['type'] = $type;
+         $where[] = 'type = {type}';
+      }
+      if ($name) {
+         $opts['name'] = $name;
+         $where[] = 'name = {name}';
+      }
+      if ($tblName) {
+         $opts['tbl_name'] = $tblName;
+         $where[] = 'tbl_name = {tbl_name}';
+      }
+
+      $sql = 'SELECT * FROM sqlite_master';
+
+      if ($opts) {
+         $sql .= ' WHERE ' . \implode(' AND ', $where);
+      }
+
+      return $this->exec($sql, $opts, 2);
+   }
+
+   /**
+    * @return (array{name:string,seq:int})[]
+    */
+   function sequence(): array
+   {
+      return $this->exec('SELECT * FROM sqlite_sequence', 2);
+   }
+
+   /**
+    * @return string[]
+    */
+   function pragmaCompileOptions(): array
+   {
+      $options = $this->exec('SELECT compile_options as _ FROM pragma_compile_options', 2);
+      return \array_column($options, '_');
+   }
+
+   /**
     * В момент создания PDO может выбросить исключение \PDOException
     * @throws IPDOException
     * @throws \PDOException

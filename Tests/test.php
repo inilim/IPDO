@@ -6,10 +6,30 @@ require_once '../vendor/autoload.php';
 
 use Inilim\Dump\Dump;
 use Inilim\IPDO\IPDOMySQL;
+use Inilim\IPDO\IPDOSQLite;
 use Inilim\IPDO\DTO\ByteParamDTO;
 use Inilim\IPDO\DTO\QueryParamDTO;
+use Inilim\IPDO\Exception\IPDOException;
 
-// Dump::init();
+Dump::init();
+
+
+
+$connect = new IPDOSQLite('D:\projects\sqlite-vector\test.sqlite');
+$result = $connect->sequence();
+
+dde($result);
+
+
+
+
+
+
+
+
+
+
+de();
 
 $a = new IPDOMySQL('remfy_local', 'root', '', 'MySQL-8.2');
 
