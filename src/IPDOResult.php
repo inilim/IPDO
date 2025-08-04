@@ -12,15 +12,18 @@ final class IPDOResult
    protected \PDOStatement $statement;
    protected int $countTouch;
    protected int $lastInsertID;
+   protected ?string $rawLastInsertID;
 
    function __construct(
       \PDOStatement $statement,
       int $countTouch,
-      int $lastInsertID
+      int $lastInsertID,
+      ?string $rawLastInsertID
    ) {
-      $this->statement    = $statement;
-      $this->countTouch   = $countTouch;
-      $this->lastInsertID = $lastInsertID;
+      $this->statement       = $statement;
+      $this->countTouch      = $countTouch;
+      $this->lastInsertID    = $lastInsertID;
+      $this->rawLastInsertID = $rawLastInsertID;
    }
 
    function getStatement(): \PDOStatement
@@ -36,5 +39,10 @@ final class IPDOResult
    function getLastInsertID(): int
    {
       return $this->lastInsertID;
+   }
+
+   function getRawLastInsertID(): ?string
+   {
+      return $this->rawLastInsertID;
    }
 }

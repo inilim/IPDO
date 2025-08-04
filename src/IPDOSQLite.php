@@ -62,7 +62,7 @@ class IPDOSQLite extends IPDO
     */
    function sequence(): array
    {
-      return $this->exec('SELECT * FROM sqlite_sequence', 2);
+      return $this->exec('SELECT * FROM sqlite_sequence', [], 2);
    }
 
    /**
@@ -70,7 +70,7 @@ class IPDOSQLite extends IPDO
     */
    function pragmaCompileOptions(): array
    {
-      $options = $this->exec('SELECT compile_options as _ FROM pragma_compile_options', 2);
+      $options = $this->exec('SELECT compile_options as _ FROM pragma_compile_options', [], 2);
       return \array_column($options, '_');
    }
 

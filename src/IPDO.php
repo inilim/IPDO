@@ -6,21 +6,29 @@ namespace Inilim\IPDO;
 
 use PDO;
 use PDOStatement;
+use Inilim\IPDO\Util;
 use Inilim\IPDO\IPDOResult;
-use Inilim\IPDO\DTO\ByteParamDTO;
 use Inilim\IPDO\DTO\QueryParamDTO;
 use Inilim\IPDO\Exception\IPDOException;
 
 /**
  * @psalm-import-type Param from QueryParamDTO
  * @psalm-import-type ParamIN from QueryParamDTO
+ * 
+ * @psalm-type FETCH_ONCE     = array<string,string|null|float|int>
+ * @psalm-type FETCH_ALL      = (array<string,string|null|float|int>)[]
+ * @psalm-type FETCH_ONCE_NUM = (string|null|float|int)[]
+ * @psalm-type FETCH_ALL_NUM  = ((string|null|float|int)[])[]
  */
 abstract class IPDO
 {
     const FETCH_ALL       = 2,
         FETCH_ONCE        = 1,
         FETCH_IPDO_RESULT = 0,
-        LEN_SQL           = 500;
+        FETCH_ALL_NUM     = 3,
+        FETCH_ONCE_NUM    = 4;
+
+    protected const LEN_SQL = 500;
 
     protected string $host;
     protected string $nameDB;
@@ -47,19 +55,19 @@ abstract class IPDO
      */
     protected int $countTouch   = 0;
     protected int $lastInsertID = -1;
+    protected ?string $rawLastInsertID = null;
+
+    // const FETCH_ALL       = 2,
+    //     FETCH_ONCE        = 1,
+    //     FETCH_IPDO_RESULT = 0,
+    //     FETCH_ALL_NUM     = 3,
+    //     FETCH_ONCE_NUM    = 4,
 
     /**
-     * выполнить запрос
      * @param int|Param|ParamIN[] $values
-     * @param self::FETCH_* $fetch 0 вернуть IPDOResult, 1 вытащить один результат, 2 вытащить все.
-     * @return ($fetch is 0
-     *      ? IPDOResult
-     *      : (
-     *              $fetch is 1
-     *                  ? array<string,string|null|int|float>
-     *                  : list<array<string,string|null|int|float>>
-     *        )
-     * )
+     * @param self::FETCH_* $fetch default self::FETCH_IPDO_RESULT
+     * 
+     * @return ($fetch is 1 ? FETCH_ONCE : ($fetch is 2 ? FETCH_ALL : ($fetch is 4 ? FETCH_ONCE_NUM : ($fetch is 3 ? FETCH_ALL_NUM : IPDOResult))))
      * 
      * @throws \InvalidArgumentException
      * @throws IPDOException
@@ -74,9 +82,10 @@ abstract class IPDO
             $values = [];
         }
 
-        $this->lastStatus   = true;
-        $this->countTouch   = 0;
-        $this->lastInsertID = -1;
+        $this->lastStatus      = true;
+        $this->countTouch      = 0;
+        $this->lastInsertID    = -1;
+        $this->rawLastInsertID = null;
         return $this->fetchResult(
             $this->tryProcess(new QueryParamDTO($query, $values)),
             $fetch
@@ -157,16 +166,39 @@ abstract class IPDO
         return $this->lastInsertID;
     }
 
+    function getRawLastInsertID(): ?string
+    {
+        return $this->rawLastInsertID;
+    }
+
     /**
+     * init connection
+     * @return self
      * @throws \PDOException
      */
-    function connect(): void
+    function connect()
     {
         if ($this->connect === null) {
             $this->connectDB();
         }
+
+        return $this;
     }
 
+    /**
+     * Whether an actual connection to the database is established.
+     *
+     * @phpstan-assert-if-true !null $this->connect
+     */
+    function isConnected(): bool
+    {
+        return $this->connect !== null;
+    }
+
+    /**
+     * @deprecated use isConnected
+     * @phpstan-assert-if-true !null $this->connect
+     */
     function hasConnect(): bool
     {
         return $this->connect !== null;
@@ -210,8 +242,9 @@ abstract class IPDO
 
     /**
      * @param \Closure(self) $callable
+     * @return self
      */
-    function transaction(\Closure $callable): void
+    function transaction(\Closure $callable)
     {
         $this->connectDB();
         if (!$this->begin()) {
@@ -228,6 +261,8 @@ abstract class IPDO
                 'message' => 'Commit failed',
             ]);
         }
+
+        return $this;
     }
 
     function inTransaction(): bool
@@ -239,29 +274,42 @@ abstract class IPDO
     }
 
     // ---------------------------------------------
-    // ---------------------------------------------
-    // ---------------------------------------------
-    // protected
-    // ---------------------------------------------
-    // ---------------------------------------------
+    // 
     // ---------------------------------------------
 
     /**
-     * TODO fetch и fetchAll могут выбрасить исключение нужно это отловить
-     * @return IPDOResult|list<array<string,array<string,string|null|int|float>>>|array<string,string|null|int|float>|array{}
+     * @param self::FETCH_* $fetch
+     * @return IPDOResult|FETCH_ALL|FETCH_ALL_NUM|FETCH_ONCE|FETCH_ONCE_NUM
      */
     protected function fetchResult(IPDOResult $result, int $fetch)
     {
-        if ($fetch === self::FETCH_ONCE) {
-            $list = $result->getStatement()->fetch(PDO::FETCH_ASSOC);
-            return !\is_array($list) ? [] : $list;
-        }
-        if ($fetch === self::FETCH_ALL) {
-            $list = $result->getStatement()->fetchAll(PDO::FETCH_ASSOC);
-            return !\is_array($list) ? [] : $list;
+        if (!\in_array($fetch, [self::FETCH_ONCE_NUM, self::FETCH_ONCE, self::FETCH_ALL, self::FETCH_ALL_NUM], true)) {
+            return $result;
         }
 
-        return $result;
+        $stm = $result->getStatement();
+        try {
+            if ($fetch === self::FETCH_ONCE_NUM) {
+                $list = $stm->fetch(PDO::FETCH_NUM);
+            }
+            if ($fetch === self::FETCH_ONCE) {
+                $list = $stm->fetch(PDO::FETCH_ASSOC);
+            }
+            if ($fetch === self::FETCH_ALL) {
+                $list = $stm->fetchAll(PDO::FETCH_ASSOC);
+            }
+            if ($fetch === self::FETCH_ALL_NUM) {
+                $list = $stm->fetchAll(PDO::FETCH_NUM);
+            }
+        } catch (\PDOException $e) {
+            throw new IPDOException([
+                'message'          => $e->getMessage(),
+                'code'             => $e->getCode(),
+                'exception_object' => $e,
+            ]);
+        }
+
+        return \is_array($list) ? $list : [];
     }
 
     protected function tryProcess(QueryParamDTO $queryParam): IPDOResult
@@ -270,7 +318,7 @@ abstract class IPDO
             return $this->process($queryParam);
         } catch (\Throwable $e) {
             $this->lastStatus  = false;
-            $queryParam->query = $this->shortQuery($queryParam->query);
+            $queryParam->query = Util::strLimit($queryParam->query, self::LEN_SQL);
 
             $errorInfo = [
                 'query_param' => (array)$queryParam,
@@ -327,7 +375,14 @@ abstract class IPDO
             ]);
         }
 
-        return $this->defineResult($stm);
+        // 
+
+        return new IPDOResult(
+            $stm,
+            $this->countTouch   = $stm->rowCount(),
+            $this->lastInsertID = $this->defineLastInsertID(),
+            $this->rawLastInsertID
+        );
     }
 
     /**
@@ -352,7 +407,7 @@ abstract class IPDO
         // &$val требование от bindParam https://www.php.net/manual/ru/pdostatement.bindparam.php#98145
         foreach ($queryParam->values as $key => &$val) {
             $mask = ':' . $key;
-            if ($this->isIntPHP($val)) {
+            if (Util::isIntPHP($val)) {
                 // @phpstan-ignore-next-line
                 $val = \intval($val);
                 $stm->bindParam($mask, $val, PDO::PARAM_INT);
@@ -370,72 +425,20 @@ abstract class IPDO
         }
     }
 
-    protected function defineResult(PDOStatement $stm): IPDOResult
-    {
-        return new IPDOResult(
-            $stm,
-            $this->countTouch   = $stm->rowCount(),
-            $this->lastInsertID = $this->defineLastInsertID()
-        );
-    }
-
     protected function defineLastInsertID(): int
     {
         if ($this->connect === null) {
             return -1;
         }
-        $id = $this->connect->lastInsertId();
-        if ($this->isNumeric($id)) {
+        try {
+            $this->rawLastInsertID = $id = $this->connect->lastInsertId();
+        } catch (\Throwable $e) {
+            return -1;
+        }
+        if (Util::isNumeric($id)) {
             return \intval($id);
         }
         // lastInsertId может вернуть строку, представляющую последнее значение
         return -1;
-    }
-
-    /**
-     * форматируем запрос для логов
-     */
-    protected function shortQuery(string $query): string
-    {
-        $query = \str_replace(["\n", "\r", "\r\n", "\t"], ' ', $query);
-        $query = \preg_replace('#\s{2,}#', ' ', $query) ?? '';
-        if (\strlen($query) > self::LEN_SQL) {
-            return \substr($query, 0, self::LEN_SQL) . '...';
-        }
-        return $query;
-    }
-
-    /**
-     * TODO данный метод взят из библиотеки inilim/tools
-     * проверка int для php, 32bit или 64bit
-     * может ли значение стать integer без изменений
-     * @param mixed $v
-     */
-    protected function isIntPHP($v): bool
-    {
-        if ($this->isNumeric($v)) {
-            /** @var string $v */
-            if (\strval(\intval($v)) === \strval($v)) {
-                return true;
-            }
-            return false;
-        }
-        return false;
-    }
-
-    /**
-     * TODO данный метод взят из библиотеки inilim/tools
-     * @param mixed $v
-     */
-    protected function isNumeric($v): bool
-    {
-        if (!\is_scalar($v) || \is_bool($v)) {
-            return false;
-        }
-        // here string|int|float
-        if (\preg_match('#^\-?[1-9][0-9]{0,}$|^0$#', \strval($v))) {
-            return true;
-        }
-        return false;
     }
 }

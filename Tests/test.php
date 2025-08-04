@@ -5,6 +5,7 @@
 require_once '../vendor/autoload.php';
 
 use Inilim\Dump\Dump;
+use Inilim\IPDO\IPDO;
 use Inilim\IPDO\IPDOMySQL;
 use Inilim\IPDO\IPDOSQLite;
 use Inilim\IPDO\DTO\ByteParamDTO;
@@ -13,12 +14,15 @@ use Inilim\IPDO\Exception\IPDOException;
 
 Dump::init();
 
-
-
 $connect = new IPDOSQLite('D:\projects\sqlite-vector\test.sqlite');
-$result = $connect->sequence();
 
-dde($result);
+$result = $connect->exec('SELECT * FROM sqlite_master', [], 4);
+
+foreach ($result as $item) {
+    // 
+}
+
+de($result);
 
 
 

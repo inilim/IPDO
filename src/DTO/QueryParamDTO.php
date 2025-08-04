@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Inilim\IPDO\DTO;
 
 use Inilim\IPDO\DTO\ByteParamDTO;
+use Inilim\IPDO\Util;
 use InvalidArgumentException;
 
 /**
@@ -27,6 +28,7 @@ final class QueryParamDTO
 
     /**
      * @param array<string,Param|ParamIN[]> $values
+     * @throws InvalidArgumentException
      */
     function __construct(
         string $query,
@@ -127,7 +129,7 @@ final class QueryParamDTO
                         $this->values[$newName] = $this->values[$name];
                     }
 
-                    $this->query = $this->replaceFirst('{' . $name . '}', ' :' . $newName . ' ', $this->query);
+                    $this->query = Util::replaceFirst('{' . $name . '}', ' :' . $newName . ' ', $this->query);
                 } // endfor
                 unset($this->values[$name]);
             } // end repeat
@@ -157,9 +159,13 @@ final class QueryParamDTO
         // unset($newName, $name, $repeat, $i);
     }
 
+    // ---------------------------------------------
+    // 
+    // ---------------------------------------------
+
     protected function prepareSubValueArrayToInOperator(string $oldName)
     {
-        if ($this->isMultidimensional($this->values[$oldName])) {
+        if (Util::isMultidimensional($this->values[$oldName])) {
             throw new InvalidArgumentException(\sprintf(
                 'IPDO: 4',
             ));
@@ -184,7 +190,7 @@ final class QueryParamDTO
                 $this->values[$newName] = $subValue;
             }
         } // endforeach
-        $this->query = $this->replaceFirst('{' . $oldName . '}', ' ' . \implode(',', $newHoles) . ' ', $this->query);
+        $this->query = Util::replaceFirst('{' . $oldName . '}', ' ' . \implode(',', $newHoles) . ' ', $this->query);
     }
 
     protected function getNewName(): string
@@ -192,30 +198,5 @@ final class QueryParamDTO
         self::$num ??= \mt_rand(100, 999);
         self::$rnd ??= \bin2hex(\random_bytes(2));
         return self::$rnd . '_' . ++self::$num;
-    }
-
-    /**
-     * @param mixed[] $array
-     */
-    protected function isMultidimensional(array $array): bool
-    {
-        foreach ($array as $item) {
-            if (\is_array($item)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    protected function replaceFirst(string $search, string $replace, string $subject): string
-    {
-        if ($search === '') {
-            return $subject;
-        }
-        $position = \strpos($subject, $search);
-        if ($position !== false) {
-            return \substr_replace($subject, $replace, $position, \strlen($search));
-        }
-        return $subject;
     }
 }

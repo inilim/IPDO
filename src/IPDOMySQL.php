@@ -7,6 +7,7 @@ namespace Inilim\IPDO;
 use PDO;
 use PDOException;
 use Inilim\IPDO\IPDO;
+use Inilim\IPDO\Exception\IPDOException;
 
 class IPDOMySQL extends IPDO
 {
@@ -33,7 +34,15 @@ class IPDOMySQL extends IPDO
     */
    protected function connectDB(): void
    {
-      if ($this->connect !== null) return;
+      if ($this->connect !== null) {
+         return;
+      }
+
+      if (!self::extensionLoaded()) {
+         throw new IPDOException([
+            'message' => 'IPDO: Extensoin not loaded "pdo_mysql"',
+         ]);
+      }
 
       $this->countConnect++;
       $this->connect = new PDO(
@@ -50,5 +59,14 @@ class IPDOMySQL extends IPDO
          ]
       );
       $this->connect->exec('SET NAMES utf8mb4');
+   }
+
+   // ---------------------------------------------
+   // 
+   // ---------------------------------------------
+
+   static function extensionLoaded(): bool
+   {
+      return \extension_loaded('pdo_mysql');
    }
 }
