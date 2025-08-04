@@ -377,10 +377,11 @@ abstract class IPDO
 
         // 
 
+        $this->defineLastInsertID();
         return new IPDOResult(
             $stm,
-            $this->countTouch   = $stm->rowCount(),
-            $this->lastInsertID = $this->defineLastInsertID(),
+            $this->countTouch = $stm->rowCount(),
+            $this->lastInsertID,
             $this->rawLastInsertID
         );
     }
@@ -425,20 +426,26 @@ abstract class IPDO
         }
     }
 
-    protected function defineLastInsertID(): int
+    /**
+     * @return void
+     */
+    protected function defineLastInsertID()
     {
         if ($this->connect === null) {
-            return -1;
+            $this->lastInsertID = -1;
+            return;
         }
         try {
             $this->rawLastInsertID = $id = $this->connect->lastInsertId();
         } catch (\Throwable $e) {
-            return -1;
+            $this->lastInsertID = -1;
+            return;
         }
         if (Util::isNumeric($id)) {
-            return \intval($id);
+            $this->lastInsertID = \intval($id);
+            return;
         }
         // lastInsertId может вернуть строку, представляющую последнее значение
-        return -1;
+        $this->lastInsertID = -1;
     }
 }
