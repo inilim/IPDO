@@ -28,6 +28,49 @@ class IPDOSQLite extends IPDO
    }
 
    /**
+    * @see https://www.php.net/manual/ru/pdo-sqlite.createfunction.php
+    * @param callable(mixed $value,mixed ...$values):mixed $callback
+    * @return self
+    */
+   function createFunction(string $function_name, callable $callback, int $num_args = -1, int $flags = 0)
+   {
+      if ($this->connect === null) {
+         $this->connectDB();
+      }
+      $this->connect->sqliteCreateFunction($function_name, $callback, $num_args, $flags);
+      return $this;
+   }
+
+   /**
+    * @see https://www.php.net/manual/ru/pdo-sqlite.createaggregate.php
+    * @param callable(mixed $context,int $rownumber,mixed $value,mixed ...$values):mixed $step
+    * @param callable(mixed $context,int $rownumber):mixed $finalize
+    * @return self
+    */
+   function createAggregate(string $name, callable $step, callable $finalize, int $numArgs = -1)
+   {
+      if ($this->connect === null) {
+         $this->connectDB();
+      }
+      $this->connect->sqliteCreateAggregate($name, $step, $finalize, $numArgs);
+      return $this;
+   }
+
+   /**
+    * @see https://www.php.net/manual/ru/pdo-sqlite.createcollation.php
+    * @param collation(string $string1,string $string2):int $callback
+    * @return self
+    */
+   function createCollation(string $name, callable $callback)
+   {
+      if ($this->connect === null) {
+         $this->connectDB();
+      }
+      $this->connect->sqliteCreateCollation($name, $callback);
+      return $this;
+   }
+
+   /**
     * @return (array{type:string,name:string,tbl_name:string,rootpage:int,sql:string})[]
     */
    function master(?string $type = null, ?string $name = null, ?string $tblName = null): array
