@@ -107,11 +107,12 @@ final class QueryParamDTO
         // ---------------------------------------------
 
         foreach ($holes as $name => $repeat) {
+            $type = \gettype($this->values[$name]);
             // INFO переименовка дублей
             if ($repeat > 1) {
                 for ($i = 0; $i < $repeat; $i++) {
                     // INFO валидируем обьекты
-                    if (\is_object($this->values[$name])) {
+                    if ($type === 'object') {
                         if (!($this->values[$name] instanceof ByteParamDTO)) {
                             throw new InvalidArgumentException(\sprintf(
                                 'IPDO: 3.1',
@@ -121,7 +122,7 @@ final class QueryParamDTO
                         $this->values[$newName] = clone $this->values[$name];
                     }
                     // INFO тут же обрабатываем массив значений
-                    elseif (\is_array($this->values[$name])) {
+                    elseif ($type === 'array') {
                         $this->prepareSubValueArrayToInOperator($name);
                         continue; // continue чтобы не выполнить нижний replaceFirst
                     } else {
@@ -136,12 +137,12 @@ final class QueryParamDTO
             // INFO переименовка
             else {
                 // INFO тут же обрабатываем массив значений
-                if (\is_array($this->values[$name])) {
+                if ($type === 'array') {
                     $this->prepareSubValueArrayToInOperator($name);
                 } else {
                     $newName = $this->getNewName();
                     // INFO валидируем обьекты
-                    if (\is_object($this->values[$name])) {
+                    if ($type === 'object') {
                         if (!($this->values[$name] instanceof ByteParamDTO)) {
                             throw new InvalidArgumentException(\sprintf(
                                 'IPDO: 3.2',

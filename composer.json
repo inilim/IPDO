@@ -10,7 +10,7 @@
     },
     "autoload-dev": {
         "psr-4": {
-            "Inilim\\Test\\": "Tests/"
+            "Inilim\\Test\\": "tests/"
         }
     },
     "authors": [
