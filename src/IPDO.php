@@ -253,7 +253,7 @@ abstract class IPDO
             ]);
         }
 
-        $callable->__invoke($this);
+        $callable($this);
 
         if (!$this->commit()) {
             $this->rollBack();
@@ -408,15 +408,19 @@ abstract class IPDO
         // &$val требование от bindParam https://www.php.net/manual/ru/pdostatement.bindparam.php#98145
         foreach ($queryParam->values as $key => &$val) {
             $mask = ':' . $key;
-            if (Util::isIntPHP($val)) {
+            $tVal = \gettype($val);
+            if (($tVal === 'string' || $tVal === 'integer') && Util::isIntPHP($val)) {
+                /** @var string|int $val */
                 // @phpstan-ignore-next-line
                 $val = \intval($val);
                 $stm->bindParam($mask, $val, PDO::PARAM_INT);
-            } elseif (\is_bool($val)) {
+            } elseif ($tVal === 'boolean') {
+                /** @var bool $val */
                 $stm->bindParam($mask, $val, PDO::PARAM_BOOL);
             } elseif ($val === null) {
                 $stm->bindParam($mask, $val, PDO::PARAM_NULL);
-            } elseif (\is_object($val)) {
+            } elseif ($tVal === 'object') {
+                /** @var ByteParamDTO $val */
                 $val = $val->getValue();
                 $stm->bindParam($mask, $val, PDO::PARAM_LOB);
             } else {
