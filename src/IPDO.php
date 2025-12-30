@@ -243,6 +243,7 @@ abstract class IPDO
     /**
      * @param \Closure(self) $callable
      * @return self
+     * @throws IPDOException|\Throwable
      */
     function transaction(\Closure $callable)
     {
@@ -253,7 +254,12 @@ abstract class IPDO
             ]);
         }
 
-        $callable($this);
+        try {
+            $callable($this);
+        } catch (\Throwable $e) {
+            $this->rollBack();
+            throw $e;
+        }
 
         if (!$this->commit()) {
             $this->rollBack();

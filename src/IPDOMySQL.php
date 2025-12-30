@@ -40,7 +40,7 @@ class IPDOMySQL extends IPDO
 
       if (!self::extensionLoaded()) {
          throw new IPDOException([
-            'message' => 'IPDO: Extensoin not loaded "pdo_mysql"',
+            'message' => 'IPDO: Extension not loaded "pdo_mysql"',
          ]);
       }
 
