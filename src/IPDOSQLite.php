@@ -30,7 +30,7 @@ class IPDOSQLite extends IPDO
    /**
     * @see https://www.php.net/manual/ru/pdo-sqlite.createfunction.php
     * @param callable(mixed $value,mixed ...$values):mixed $callback
-    * @return self
+    * @return static
     */
    function createFunction(string $function_name, callable $callback, int $num_args = -1, int $flags = 0)
    {
@@ -45,7 +45,7 @@ class IPDOSQLite extends IPDO
     * @see https://www.php.net/manual/ru/pdo-sqlite.createaggregate.php
     * @param callable(mixed $context,int $rownumber,mixed $value,mixed ...$values):mixed $step
     * @param callable(mixed $context,int $rownumber):mixed $finalize
-    * @return self
+    * @return static
     */
    function createAggregate(string $name, callable $step, callable $finalize, int $numArgs = -1)
    {
@@ -59,7 +59,7 @@ class IPDOSQLite extends IPDO
    /**
     * @see https://www.php.net/manual/ru/pdo-sqlite.createcollation.php
     * @param collation(string $string1,string $string2):int $callback
-    * @return self
+    * @return static
     */
    function createCollation(string $name, callable $callback)
    {
@@ -118,6 +118,26 @@ class IPDOSQLite extends IPDO
    }
 
    /**
+    * @return static
+    */
+   function vacuumInto(string $pathToFile)
+   {
+      $this->exec('VACUUM INTO {file};', [
+         'file' => $pathToFile,
+      ]);
+      return $this;
+   }
+
+   /**
+    * alias vacuumInto()
+    * @return static
+    */
+   function backupToFile(string $pathToFile)
+   {
+      return $this->vacuumInto($pathToFile);
+   }
+
+   /**
     * В момент создания PDO может выбросить исключение \PDOException
     * @throws IPDOException
     * @throws \PDOException
@@ -137,7 +157,7 @@ class IPDOSQLite extends IPDO
          ]);
       }
 
-      if (!self::extensionLoaded()) {
+      if (!static::extensionLoaded()) {
          throw new IPDOException([
             'message' => 'IPDO: Extensoin not loaded "pdo_sqlite"',
          ]);

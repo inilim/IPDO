@@ -121,7 +121,10 @@ abstract class IPDO
         return $this->connect;
     }
 
-    function setPDO(PDO $pdo): self
+    /**
+     * @return static
+     */
+    function setPDO(PDO $pdo)
     {
         $this->connect = $pdo;
         return $this;
@@ -173,7 +176,7 @@ abstract class IPDO
 
     /**
      * init connection
-     * @return self
+     * @return static
      * @throws \PDOException
      */
     function connect()
@@ -241,8 +244,8 @@ abstract class IPDO
     }
 
     /**
-     * @param \Closure(self) $callable
-     * @return self
+     * @param \Closure(static) $callable
+     * @return static
      * @throws IPDOException|\Throwable
      */
     function transaction(\Closure $callable)
