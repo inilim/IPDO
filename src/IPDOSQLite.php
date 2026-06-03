@@ -148,7 +148,26 @@ class IPDOSQLite extends IPDO
          return;
       }
 
-      if ($this->nameDB !== ':memory:' && !\is_file($this->nameDB)) {
+      if (\strpos($this->nameDB, 'sqlite:') === 0) {
+         $this->nameDB = Util::replaceFirst('sqlite:', '', $this->nameDB);
+      }
+
+      if (\strpos($this->nameDB, ':memory:') === 0) {
+         // skip
+      }
+      // 
+      elseif (\strpos($this->nameDB, 'file:') === 0) {
+         if (\PHP_VERSION_ID < 80100) {
+            throw new IPDOException([
+               'message' => \sprintf(
+                  'IPDO: URI not supported "%s". PHP >=8.1',
+                  $this->nameDB,
+               ),
+            ]);
+         }
+      }
+      // 
+      elseif (!\is_file($this->nameDB)) {
          throw new IPDOException([
             'message' => \sprintf(
                'IPDO: File not found "%s"',
