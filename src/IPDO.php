@@ -327,6 +327,11 @@ abstract class IPDO
             return $this->process($queryParam);
         } catch (\Throwable $e) {
             $this->lastStatus  = false;
+
+            if (!($e instanceof \PDOException || $e instanceof IPDOException)) {
+                throw $e;
+            }
+
             $queryParam->query = Util::strLimit($queryParam->query, self::LEN_SQL);
 
             $errorInfo = [
@@ -336,6 +341,7 @@ abstract class IPDO
             if ($e instanceof IPDOException) {
                 throw new IPDOException($errorInfo + $e->getError());
             } else {
+                /** @var \PDOException $e */
                 throw new IPDOException($errorInfo + [
                     'message'          => $e->getMessage(),
                     'code'             => $e->getCode(),
@@ -429,7 +435,7 @@ abstract class IPDO
             } elseif ($val === null) {
                 $stm->bindParam($mask, $val, PDO::PARAM_NULL);
             } elseif ($tVal === 'object') {
-                /** @var ByteParamDTO $val */
+                /** @var \Inilim\IPDO\DTO\ByteParamDTO $val */
                 $val = $val->getValue();
                 $stm->bindParam($mask, $val, PDO::PARAM_LOB);
             } else {
