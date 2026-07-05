@@ -461,10 +461,7 @@ abstract class IPDO
         }
     }
 
-    /**
-     * @return void
-     */
-    protected function defineLastInsertID()
+    protected function defineLastInsertID(): void
     {
         if ($this->connect === null) {
             $this->lastInsertID = -1;
