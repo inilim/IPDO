@@ -3,4 +3,5 @@
 /composer.lock
 /.phpunit.*
 /TODO
-.sandbox
+/.sandbox
+/opencode.json

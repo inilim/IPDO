@@ -460,4 +460,29 @@ final class QueryParamDTOTest extends TestCase
             'item' => new \stdClass,
         ]);
     }
+
+    /**
+     * Плейсхолдер в верхнем регистре с ключом параметра в том же регистре.
+     * Регистрозависимое совпадение ключа из $values с именем плейсхолдера —
+     * ожидается успешная подстановка именованного параметра.
+     */
+    public function testUppercasePlaceholderWithMatchingKey(): void
+    {
+        $dto = new QueryParamDTO('{ITEM}', ['ITEM' => 1]);
+
+        $this->assertSame(false, \strpos($dto->query, '{'));
+        $this->assertSame(false, \strpos($dto->query, '}'));
+        $this->assertSame(1, \substr_count($dto->query, ':'));
+        $this->assertCount(1, $dto->values);
+    }
+
+    /**
+     */
+    public function testPlaceholderCaseMismatchThrows(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessageMatches('#^IPDO\:#');
+
+        new QueryParamDTO('{ITEM}', ['item' => 1]);
+    }
 }

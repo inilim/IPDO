@@ -16,7 +16,7 @@ use InvalidArgumentException;
  */
 final class QueryParamDTO
 {
-    protected const PATTERN       = '#\{([a-z0-9\_]+)\}#i';
+    protected const PATTERN       = '#\{([a-zA-Z0-9\_]+)\}#';
     protected static ?int $num    = null;
     protected static ?string $rnd = null;
 
