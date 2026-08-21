@@ -22,7 +22,7 @@ final class QueryParamDTO
 
     public string $query;
     /**
-     * @var array<string,Param>
+     * @var array<string,Param|ParamIN[]>
      */
     public array $values;
 
@@ -37,8 +37,8 @@ final class QueryParamDTO
         $this->query = $query;
         $holes = [];
         \preg_match_all(self::PATTERN, $query, $holes);
-        $holes = $holes[1] ?? [];
-        /** @var string[] $holes */
+        $holes = $holes[1];
+        /** @var list<non-empty-string> $holes */
         $hasHoles = !!$holes;
         unset($query);
 
@@ -69,7 +69,7 @@ final class QueryParamDTO
         unset($values);
 
         $holes = \array_count_values($holes);
-        /** @var array<string,int> $holes */
+        /** @var array<string, positive-int> $holes */
 
         // ---------------------------------------------
         // INFO берем только те ключи что есть в запросе
@@ -112,7 +112,7 @@ final class QueryParamDTO
             if ($repeat > 1) {
                 for ($i = 0; $i < $repeat; $i++) {
                     // INFO валидируем обьекты
-                    if ($type === 'object') {
+                    if ('object' === $type) {
                         if (!($this->values[$name] instanceof ByteParamDTO)) {
                             throw new InvalidArgumentException(\sprintf(
                                 'IPDO: 3.1',
@@ -122,8 +122,8 @@ final class QueryParamDTO
                         $this->values[$newName] = clone $this->values[$name];
                     }
                     // INFO тут же обрабатываем массив значений
-                    elseif ($type === 'array') {
-                        $this->prepareSubValueArrayToInOperator($name);
+                    elseif ('array' === $type) {
+                        $this->prepareSubValueArrayToInOperator($name, $this->values[$name]);
                         continue; // continue чтобы не выполнить нижний replaceFirst
                     } else {
                         $newName = $this->getNewName();
@@ -137,12 +137,12 @@ final class QueryParamDTO
             // INFO переименовка
             else {
                 // INFO тут же обрабатываем массив значений
-                if ($type === 'array') {
-                    $this->prepareSubValueArrayToInOperator($name);
+                if ('array' === $type) {
+                    $this->prepareSubValueArrayToInOperator($name, $this->values[$name]);
                 } else {
                     $newName = $this->getNewName();
                     // INFO валидируем обьекты
-                    if ($type === 'object') {
+                    if ('object' === $type) {
                         if (!($this->values[$name] instanceof ByteParamDTO)) {
                             throw new InvalidArgumentException(\sprintf(
                                 'IPDO: 3.2',
@@ -164,31 +164,38 @@ final class QueryParamDTO
     // 
     // ---------------------------------------------
 
-    protected function prepareSubValueArrayToInOperator(string $oldName)
+    /**
+     * @param mixed $rawValue
+     */
+    protected function prepareSubValueArrayToInOperator(string $oldName, $rawValue): void
     {
-        if (Util::isMultidimensional($this->values[$oldName])) {
+        if (!\is_array($rawValue)) {
+            throw new InvalidArgumentException(\sprintf(
+                'IPDO: 4',
+            ));
+        }
+        if (Util::isMultidimensional($rawValue)) {
             throw new InvalidArgumentException(\sprintf(
                 'IPDO: 4',
             ));
         }
         $newHoles = [];
-        foreach ($this->values[$oldName] as $subValue) {
-            if ($subValue === null) {
+        foreach ($rawValue as $subValue) {
+            if (null === $subValue) {
                 throw new InvalidArgumentException(\sprintf(
                     'IPDO: 5',
                 ));
             }
             $newName = $this->getNewName();
             $newHoles[] = ':' . $newName;
-            if (\is_object($subValue)) {
-                if (!($subValue instanceof ByteParamDTO)) {
-                    throw new InvalidArgumentException(\sprintf(
-                        'IPDO: 6',
-                    ));
-                }
+            if ($subValue instanceof ByteParamDTO) {
                 $this->values[$newName] = clone $subValue;
-            } else {
+            } elseif (\is_scalar($subValue)) {
                 $this->values[$newName] = $subValue;
+            } else {
+                throw new InvalidArgumentException(\sprintf(
+                    'IPDO: 6',
+                ));
             }
         } // endforeach
         $this->query = Util::replaceFirst('{' . $oldName . '}', ' ' . \implode(',', $newHoles) . ' ', $this->query);

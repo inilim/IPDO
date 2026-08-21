@@ -21,14 +21,22 @@
             "name": "Web community"
         }
     ],
+    "scripts": {
+        "tests": [
+            "php74 vendor/bin/phpunit tests"
+        ],
+        "stan": [
+            "php vendor/bin/phpstan analyze"
+        ]
+    },
     "minimum-stability": "stable",
     "prefer-stable": true,
     "require": {
         "php": "^7.4 | ^8.2"
     },
     "require-dev": {
-        "phpstan/phpstan": "@stable",
         "inilim/dump": "dev-main",
-        "phpunit/phpunit": "^9.6"
+        "phpunit/phpunit": "^9.6",
+        "phpstan/phpstan": "^2.2"
     }
 }

@@ -24,7 +24,7 @@ class IPDOSQLite extends IPDO
     */
    function getVersion(): string
    {
-      return \strval($this->exec('SELECT sqlite_version() AS ver', 1)['ver']);
+      return \strval($this->exec('SELECT sqlite_version() AS ver', [], self::FETCH_ONCE)['ver']);
    }
 
    /**
@@ -34,7 +34,7 @@ class IPDOSQLite extends IPDO
     */
    function createFunction(string $function_name, callable $callback, int $num_args = -1, int $flags = 0)
    {
-      if ($this->connect === null) {
+      if (null === $this->connect) {
          $this->connectDB();
       }
       $this->connect->sqliteCreateFunction($function_name, $callback, $num_args, $flags);
@@ -49,7 +49,7 @@ class IPDOSQLite extends IPDO
     */
    function createAggregate(string $name, callable $step, callable $finalize, int $numArgs = -1)
    {
-      if ($this->connect === null) {
+      if (null === $this->connect) {
          $this->connectDB();
       }
       $this->connect->sqliteCreateAggregate($name, $step, $finalize, $numArgs);
@@ -57,13 +57,13 @@ class IPDOSQLite extends IPDO
    }
 
    /**
-    * @see https://www.php.net/manual/ru/pdo-sqlite.createcollation.php
-    * @param collation(string $string1,string $string2):int $callback
-    * @return static
+* @see https://www.php.net/manual/ru/pdo-sqlite.createcollation.php
+     * @param callable(string $string1,string $string2):int $callback
+     * @return static
     */
    function createCollation(string $name, callable $callback)
    {
-      if ($this->connect === null) {
+      if (null === $this->connect) {
          $this->connectDB();
       }
       $this->connect->sqliteCreateCollation($name, $callback);
@@ -97,7 +97,10 @@ class IPDOSQLite extends IPDO
          $sql .= ' WHERE ' . \implode(' AND ', $where);
       }
 
-      return $this->exec($sql, $opts, 2);
+      /** @var (array{type:string,name:string,tbl_name:string,rootpage:int,sql:string})[] $result */
+      $result = $this->exec($sql, $opts, self::FETCH_ALL);
+
+      return $result;
    }
 
    /**
@@ -105,7 +108,10 @@ class IPDOSQLite extends IPDO
     */
    function sequence(): array
    {
-      return $this->exec('SELECT * FROM sqlite_sequence', [], 2);
+      /** @var (array{name:string,seq:int})[] $result */
+      $result = $this->exec('SELECT * FROM sqlite_sequence', [], self::FETCH_ALL);
+
+      return $result;
    }
 
    /**
@@ -113,7 +119,8 @@ class IPDOSQLite extends IPDO
     */
    function pragmaCompileOptions(): array
    {
-      $options = $this->exec('SELECT compile_options as _ FROM pragma_compile_options', [], 2);
+      /** @var (array{_: string})[] $options */
+      $options = $this->exec('SELECT compile_options as _ FROM pragma_compile_options', [], self::FETCH_ALL);
       return \array_column($options, '_');
    }
 
@@ -137,14 +144,15 @@ class IPDOSQLite extends IPDO
       return $this->vacuumInto($pathToFile);
    }
 
-   /**
-    * В момент создания PDO может выбросить исключение \PDOException
-    * @throws IPDOException
-    * @throws \PDOException
-    */
-   protected function connectDB(): void
+/**
+     * В момент создания PDO может выбросить исключение \PDOException
+     * @throws IPDOException
+     * @throws \PDOException
+     * @phpstan-assert !null $this->connect
+     */
+    protected function connectDB(): void
    {
-      if ($this->connect !== null) {
+      if (null !== $this->connect) {
          return;
       }
 

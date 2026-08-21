@@ -31,6 +31,7 @@ class IPDOMySQL extends IPDO
    /**
     * В момент создания PDO может выбросить исключение PDOException
     * @throws PDOException
+    * @phpstan-assert !null $this->connect
     */
    protected function connectDB(): void
    {

@@ -66,7 +66,7 @@ final class Util
 
     static function replaceFirst(string $search, string $replace, string $subject): string
     {
-        if ($search === '') {
+        if ('' === $search) {
             return $subject;
         }
         $position = \strpos($subject, $search);

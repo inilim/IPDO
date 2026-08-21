@@ -8,6 +8,7 @@ use PDO;
 use PDOStatement;
 use Inilim\IPDO\Util;
 use Inilim\IPDO\IPDOResult;
+use Inilim\IPDO\DTO\ByteParamDTO;
 use Inilim\IPDO\DTO\QueryParamDTO;
 use Inilim\IPDO\Exception\IPDOException;
 
@@ -64,7 +65,7 @@ abstract class IPDO
     protected ?string $rawLastInsertID = null;
 
     /**
-     * @param int|Param|ParamIN[] $values
+     * @param self::FETCH_*|array<string,Param|ParamIN[]> $values
      * @param self::FETCH_* $fetch default self::FETCH_IPDO_RESULT
      * 
      * @return ($fetch is 1 ? TYPE_FETCH_ONCE : ($fetch is 2 ? TYPE_FETCH_ALL : ($fetch is 4 ? TYPE_FETCH_ONCE_NUM : ($fetch is 3 ? TYPE_FETCH_ALL_NUM : ($fetch is 5 ? TYPE_FETCH_GENERATOR_ASSOC : ($fetch is 6 ? TYPE_FETCH_GENERATOR_NUM : IPDOResult))))))
@@ -97,7 +98,7 @@ abstract class IPDO
      */
     function status(): bool
     {
-        if ($this->connect === null) {
+        if (null === $this->connect) {
             return false;
         }
         return $this->lastStatus;
@@ -143,7 +144,7 @@ abstract class IPDO
      */
     function involved(): int
     {
-        if ($this->connect === null) {
+        if (null === $this->connect) {
             return -1;
         }
         return $this->countTouch;
@@ -163,7 +164,7 @@ abstract class IPDO
      */
     function getLastInsertID(): int
     {
-        if ($this->connect === null) {
+        if (null === $this->connect) {
             return -1;
         }
         return $this->lastInsertID;
@@ -181,7 +182,7 @@ abstract class IPDO
      */
     function connect()
     {
-        if ($this->connect === null) {
+        if (null === $this->connect) {
             $this->connectDB();
         }
 
@@ -212,7 +213,7 @@ abstract class IPDO
      */
     function begin(): bool
     {
-        if ($this->connect === null) {
+        if (null === $this->connect) {
             return false;
         }
         if ($this->connect->inTransaction()) {
@@ -224,7 +225,7 @@ abstract class IPDO
 
     function rollBack(): void
     {
-        if ($this->connect === null) {
+        if (null === $this->connect) {
             return;
         }
         if ($this->inTransaction()) {
@@ -234,7 +235,7 @@ abstract class IPDO
 
     function commit(): bool
     {
-        if ($this->connect === null) {
+        if (null === $this->connect) {
             return false;
         }
         if ($this->inTransaction()) {
@@ -244,7 +245,7 @@ abstract class IPDO
     }
 
     /**
-     * @param \Closure(static) $callable
+     * @param \Closure(static): mixed $callable
      * @return static
      * @throws IPDOException|\Throwable
      */
@@ -276,7 +277,7 @@ abstract class IPDO
 
     function inTransaction(): bool
     {
-        if ($this->connect === null) {
+        if (null === $this->connect) {
             return false;
         }
         return $this->connect->inTransaction();
@@ -299,17 +300,19 @@ abstract class IPDO
         $stm = $result->getStatement();
         try {
             if ($fetch === self::FETCH_ONCE_NUM) {
+                /** @var TYPE_FETCH_ONCE_NUM|false $list */
                 $list = $stm->fetch(PDO::FETCH_NUM);
             } elseif ($fetch === self::FETCH_ONCE) {
+                /** @var TYPE_FETCH_ONCE|false $list */
                 $list = $stm->fetch(PDO::FETCH_ASSOC);
             } elseif ($fetch === self::FETCH_ALL) {
+                /** @var TYPE_FETCH_ALL $list */
                 $list = $stm->fetchAll(PDO::FETCH_ASSOC);
             } elseif ($fetch === self::FETCH_ALL_NUM) {
+                /** @var TYPE_FETCH_ALL_NUM $list */
                 $list = $stm->fetchAll(PDO::FETCH_NUM);
-            } elseif ($fetch === self::FETCH_GENERATOR_ASSOC || $fetch === self::FETCH_GENERATOR_NUM) {
-                return $this->createGenerator($stm, $fetch);
             } else {
-                return $result;
+                return $this->createGenerator($stm, $fetch);
             }
         } catch (\PDOException $e) {
             throw new IPDOException([
@@ -328,12 +331,20 @@ abstract class IPDO
      */
     protected function createGenerator(PDOStatement $stm, int $fetch): \Generator
     {
-        $stm->setFetchMode(
-            $fetch === self::FETCH_GENERATOR_ASSOC ? PDO::FETCH_ASSOC : PDO::FETCH_NUM
-        );
+        if ($fetch === self::FETCH_GENERATOR_ASSOC) {
+            $stm->setFetchMode(PDO::FETCH_ASSOC);
 
-        while ($row = $stm->fetch()) {
-            yield $row;
+            while ($row = $stm->fetch()) {
+                /** @var array<string, float|int|string|null> $row */
+                yield $row;
+            }
+        } else {
+            $stm->setFetchMode(PDO::FETCH_NUM);
+
+            while ($row = $stm->fetch()) {
+                /** @var array<int, float|int|string|null> $row */
+                yield $row;
+            }
         }
     }
 
@@ -374,12 +385,6 @@ abstract class IPDO
     {
         $this->connectDB();
 
-        if ($this->connect === null) {
-            throw new IPDOException([
-                'message' => 'IPDO::connectDB() property "connect" is null',
-            ]);
-        }
-
         // подготовка запроса
         $stm = $this->connect->prepare($queryParam->query);
 
@@ -419,6 +424,7 @@ abstract class IPDO
 
     /**
      * @throws \PDOException
+     * @phpstan-assert !null $this->connect
      */
     abstract protected function connectDB(): void;
 
@@ -435,25 +441,25 @@ abstract class IPDO
      */
     protected function setBindParams(PDOStatement $stm, QueryParamDTO $queryParam)
     {
-        //$v = [];# массив для отладки
+        /** @var array<string,Param> $values */
+        $values = $queryParam->values;
         // &$val требование от bindParam https://www.php.net/manual/ru/pdostatement.bindparam.php#98145
-        foreach ($queryParam->values as $key => &$val) {
+        foreach ($values as $key => &$val) {
             $mask = ':' . $key;
-            $tVal = \gettype($val);
-            if (($tVal === 'string' || $tVal === 'integer') && Util::isIntPHP($val)) {
-                /** @var string|int $val */
-                // @phpstan-ignore-next-line
-                $val = \intval($val);
-                $stm->bindParam($mask, $val, PDO::PARAM_INT);
-            } elseif ($tVal === 'boolean') {
-                /** @var bool $val */
-                $stm->bindParam($mask, $val, PDO::PARAM_BOOL);
-            } elseif ($val === null) {
-                $stm->bindParam($mask, $val, PDO::PARAM_NULL);
-            } elseif ($tVal === 'object') {
-                /** @var \Inilim\IPDO\DTO\ByteParamDTO $val */
+            if ($val instanceof ByteParamDTO) {
                 $val = $val->getValue();
                 $stm->bindParam($mask, $val, PDO::PARAM_LOB);
+            } elseif (\is_bool($val)) {
+                $stm->bindParam($mask, $val, PDO::PARAM_BOOL);
+            } elseif (\is_int($val) || \is_string($val)) {
+                if (Util::isIntPHP($val)) {
+                    $val = \intval($val);
+                    $stm->bindParam($mask, $val, PDO::PARAM_INT);
+                } else {
+                    $stm->bindParam($mask, $val, PDO::PARAM_STR);
+                }
+            } elseif ($val === null) {
+                $stm->bindParam($mask, $val, PDO::PARAM_NULL);
             } else {
                 $val = \strval($val);
                 $stm->bindParam($mask, $val, PDO::PARAM_STR);
@@ -463,16 +469,21 @@ abstract class IPDO
 
     protected function defineLastInsertID(): void
     {
-        if ($this->connect === null) {
+        if (null === $this->connect) {
             $this->lastInsertID = -1;
             return;
         }
         try {
-            $this->rawLastInsertID = $id = $this->connect->lastInsertId();
+            $id = $this->connect->lastInsertId();
         } catch (\Throwable $e) {
             $this->lastInsertID = -1;
             return;
         }
+        if ($id === false) {
+            $this->lastInsertID = -1;
+            return;
+        }
+        $this->rawLastInsertID = $id;
         if (Util::isNumeric($id)) {
             $this->lastInsertID = \intval($id);
             return;
