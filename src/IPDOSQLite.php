@@ -186,7 +186,7 @@ class IPDOSQLite extends IPDO
 
       if (!static::extensionLoaded()) {
          throw new IPDOException([
-            'message' => 'IPDO: Extensoin not loaded "pdo_sqlite"',
+            'message' => 'IPDO: Extension not loaded "pdo_sqlite"',
          ]);
       }
 

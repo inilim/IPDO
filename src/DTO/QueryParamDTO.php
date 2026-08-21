@@ -48,9 +48,9 @@ final class QueryParamDTO
 
         if (!$hasHoles) {
             if ($values) {
-                throw new InvalidArgumentException(\sprintf(
-                    'IPDO: Passing parameters without a conversion specifier in a request',
-                ));
+                throw new InvalidArgumentException(
+                    'IPDO: Parameters were passed, but the query has no placeholders.'
+                );
             }
             $this->values = [];
             return;
@@ -81,16 +81,16 @@ final class QueryParamDTO
         $sizeAfter    = \count($values);
 
         if ($sizeBefore !== $sizeAfter) {
-            throw new InvalidArgumentException(\sprintf(
-                'IPDO: The number of parameters differs from the conversion specifier in the request.',
-            ));
+            throw new InvalidArgumentException(
+                'IPDO: Extra parameters were passed that do not match any placeholder in the query.'
+            );
         }
         unset($sizeBefore);
 
         if (!$values) {
-            throw new InvalidArgumentException(\sprintf(
-                'IPDO: 2',
-            ));
+            throw new InvalidArgumentException(
+                'IPDO: Query contains placeholders, but no parameters were passed.'
+            );
         }
 
         // ---------------------------------------------
@@ -98,9 +98,9 @@ final class QueryParamDTO
         // ---------------------------------------------
 
         if ($sizeAfter !== \count($holes)) {
-            throw new InvalidArgumentException(\sprintf(
-                'IPDO: 3',
-            ));
+            throw new InvalidArgumentException(
+                'IPDO: Missing parameters for one or more placeholders in the query.'
+            );
         }
 
         // ---------------------------------------------
@@ -117,9 +117,9 @@ final class QueryParamDTO
                     if ('object' === $type) {
                         /** @var object $value */
                         if (!($value instanceof ByteParamDTO)) {
-                            throw new InvalidArgumentException(\sprintf(
-                                'IPDO: 3.1',
-                            ));
+                            throw new InvalidArgumentException(
+                                'IPDO: Unsupported object type in parameters; only ByteParamDTO objects are allowed.'
+                            );
                         }
                         $newName = $this->getNewName();
                         $values[$newName] = clone $value;
@@ -150,9 +150,9 @@ final class QueryParamDTO
                     if ('object' === $type) {
                         /** @var object $value */
                         if (!($value instanceof ByteParamDTO)) {
-                            throw new InvalidArgumentException(\sprintf(
-                                'IPDO: 3.2',
-                            ));
+                            throw new InvalidArgumentException(
+                                'IPDO: Unsupported object type in parameters; only ByteParamDTO objects are allowed.'
+                            );
                         }
                         $values[$newName] = clone $value;
                     } else {
@@ -176,18 +176,18 @@ final class QueryParamDTO
     protected function prepareSubValueArrayToInOperator(string $oldName, array $rawValue): void
     {
         if (Util::isMultidimensional($rawValue)) {
-            throw new InvalidArgumentException(\sprintf(
-                'IPDO: 4',
-            ));
+            throw new InvalidArgumentException(
+                'IPDO: Nested arrays are not allowed for the IN operator.'
+            );
         }
         $newHoles = [];
         $values = &$this->values;
         foreach ($rawValue as $subValue) {
             // @phpstan-ignore-next-line дополнительная проверка. Тут null не должен быть, но user может по ошибке его сюда добавить.
             if (null === $subValue) {
-                throw new InvalidArgumentException(\sprintf(
-                    'IPDO: 5',
-                ));
+                throw new InvalidArgumentException(
+                    'IPDO: NULL values are not allowed in arrays for the IN operator.'
+                );
             }
             $newName = $this->getNewName();
             $newHoles[] = ':' . $newName;
@@ -196,9 +196,9 @@ final class QueryParamDTO
             } elseif (\is_scalar($subValue)) {
                 $values[$newName] = $subValue;
             } else {
-                throw new InvalidArgumentException(\sprintf(
-                    'IPDO: 6',
-                ));
+                throw new InvalidArgumentException(
+                    'IPDO: Unsupported value type in array for the IN operator; only scalar values or ByteParamDTO objects are allowed.'
+                );
             }
         } // endforeach
         $this->query = Util::replaceFirst('{' . $oldName . '}', ' ' . \implode(',', $newHoles) . ' ', $this->query);
