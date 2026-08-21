@@ -76,9 +76,9 @@ final class QueryParamDTO
         // INFO берем только те ключи что есть в запросе
         // ---------------------------------------------
 
-        $sizeBefore   = \sizeof($values);
+        $sizeBefore   = \count($values);
         $values = \array_intersect_key($values, $holes);
-        $sizeAfter    = \sizeof($values);
+        $sizeAfter    = \count($values);
 
         if ($sizeBefore !== $sizeAfter) {
             throw new InvalidArgumentException(\sprintf(
@@ -97,7 +97,7 @@ final class QueryParamDTO
         // INFO проверям что ключи из запроса есть в values
         // ---------------------------------------------
 
-        if ($sizeAfter !== \sizeof($holes)) {
+        if ($sizeAfter !== \count($holes)) {
             throw new InvalidArgumentException(\sprintf(
                 'IPDO: 3',
             ));

@@ -231,7 +231,7 @@ final class QueryParamDTOTest extends TestCase
 
         foreach ($values as $i => $subValues) {
             $dto = new QueryParamDTO($subValues['query'], $subValues['values']);
-            $this->assertSame(\sizeof($dto->values), $subValues['expecting'], \strval($i));
+            $this->assertSame(\count($dto->values), $subValues['expecting'], \strval($i));
         }
     }
 
