@@ -67,6 +67,7 @@ final class QueryParamDTO
 
         $this->values = $values;
         unset($values);
+        $values = &$this->values;
 
         $holes = \array_count_values($holes);
         /** @var array<string, positive-int> $holes */
@@ -75,9 +76,9 @@ final class QueryParamDTO
         // INFO берем только те ключи что есть в запросе
         // ---------------------------------------------
 
-        $sizeBefore   = \sizeof($this->values);
-        $this->values = \array_intersect_key($this->values, $holes);
-        $sizeAfter    = \sizeof($this->values);
+        $sizeBefore   = \sizeof($values);
+        $values = \array_intersect_key($values, $holes);
+        $sizeAfter    = \sizeof($values);
 
         if ($sizeBefore !== $sizeAfter) {
             throw new InvalidArgumentException(\sprintf(
@@ -86,7 +87,7 @@ final class QueryParamDTO
         }
         unset($sizeBefore);
 
-        if (!$this->values) {
+        if (!$values) {
             throw new InvalidArgumentException(\sprintf(
                 'IPDO: 2',
             ));
@@ -107,54 +108,59 @@ final class QueryParamDTO
         // ---------------------------------------------
 
         foreach ($holes as $name => $repeat) {
-            $type = \gettype($this->values[$name]);
+            $value = &$values[$name];
+            $type = \gettype($value);
             // INFO переименовка дублей
             if ($repeat > 1) {
                 for ($i = 0; $i < $repeat; $i++) {
                     // INFO валидируем обьекты
                     if ('object' === $type) {
-                        if (!($this->values[$name] instanceof ByteParamDTO)) {
+                        /** @var object $value */
+                        if (!($value instanceof ByteParamDTO)) {
                             throw new InvalidArgumentException(\sprintf(
                                 'IPDO: 3.1',
                             ));
                         }
                         $newName = $this->getNewName();
-                        $this->values[$newName] = clone $this->values[$name];
+                        $values[$newName] = clone $value;
                     }
                     // INFO тут же обрабатываем массив значений
                     elseif ('array' === $type) {
-                        $this->prepareSubValueArrayToInOperator($name, $this->values[$name]);
+                        /** @var ParamIN[] $value */
+                        $this->prepareSubValueArrayToInOperator($name, $value);
                         continue; // continue чтобы не выполнить нижний replaceFirst
                     } else {
                         $newName = $this->getNewName();
-                        $this->values[$newName] = $this->values[$name];
+                        $values[$newName] = $value;
                     }
 
                     $this->query = Util::replaceFirst('{' . $name . '}', ' :' . $newName . ' ', $this->query);
                 } // endfor
-                unset($this->values[$name]);
+                unset($values[$name]);
             } // end repeat
             // INFO переименовка
             else {
                 // INFO тут же обрабатываем массив значений
                 if ('array' === $type) {
-                    $this->prepareSubValueArrayToInOperator($name, $this->values[$name]);
+                    /** @var ParamIN[] $value */
+                    $this->prepareSubValueArrayToInOperator($name, $value);
                 } else {
                     $newName = $this->getNewName();
                     // INFO валидируем обьекты
                     if ('object' === $type) {
-                        if (!($this->values[$name] instanceof ByteParamDTO)) {
+                        /** @var object $value */
+                        if (!($value instanceof ByteParamDTO)) {
                             throw new InvalidArgumentException(\sprintf(
                                 'IPDO: 3.2',
                             ));
                         }
-                        $this->values[$newName] = clone $this->values[$name];
+                        $values[$newName] = clone $value;
                     } else {
-                        $this->values[$newName] = $this->values[$name];
+                        $values[$newName] = $value;
                     }
                     $this->query = \str_replace('{' . $name . '}', ' :' . $newName . ' ', $this->query);
                 }
-                unset($this->values[$name]);
+                unset($values[$name]);
             }
         } // endforeach
         // unset($newName, $name, $repeat, $i);
@@ -165,22 +171,19 @@ final class QueryParamDTO
     // ---------------------------------------------
 
     /**
-     * @param mixed $rawValue
+     * @param ParamIN[] $rawValue
      */
-    protected function prepareSubValueArrayToInOperator(string $oldName, $rawValue): void
+    protected function prepareSubValueArrayToInOperator(string $oldName, array $rawValue): void
     {
-        if (!\is_array($rawValue)) {
-            throw new InvalidArgumentException(\sprintf(
-                'IPDO: 4',
-            ));
-        }
         if (Util::isMultidimensional($rawValue)) {
             throw new InvalidArgumentException(\sprintf(
                 'IPDO: 4',
             ));
         }
         $newHoles = [];
+        $values = &$this->values;
         foreach ($rawValue as $subValue) {
+            // @phpstan-ignore-next-line дополнительная проверка. Тут null не должен быть, но user может по ошибке его сюда добавить.
             if (null === $subValue) {
                 throw new InvalidArgumentException(\sprintf(
                     'IPDO: 5',
@@ -189,9 +192,9 @@ final class QueryParamDTO
             $newName = $this->getNewName();
             $newHoles[] = ':' . $newName;
             if ($subValue instanceof ByteParamDTO) {
-                $this->values[$newName] = clone $subValue;
+                $values[$newName] = clone $subValue;
             } elseif (\is_scalar($subValue)) {
-                $this->values[$newName] = $subValue;
+                $values[$newName] = $subValue;
             } else {
                 throw new InvalidArgumentException(\sprintf(
                     'IPDO: 6',
