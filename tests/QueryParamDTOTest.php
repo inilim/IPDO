@@ -100,8 +100,8 @@ final class QueryParamDTOTest extends TestCase
         ];
 
         $dto = new QueryParamDTO($query, $values);
-        $this->assertNotSame(strpos($dto->query, '{') !== false, true);
-        $this->assertNotSame(strpos($dto->query, '}') !== false, true);
+        $this->assertSame(false, \strpos($dto->query, '{'));
+        $this->assertSame(false, \strpos($dto->query, '}'));
     }
 
     public function testCountHolesFromQuery(): void
@@ -377,6 +377,87 @@ final class QueryParamDTOTest extends TestCase
             'item4' => new ByteParamDTO('byte'),
             'item5' => true,
             'item6' => [1, null, 3, 4, 5],
+        ]);
+    }
+
+    /**
+     * SQL-запрос без плейсхолдеров `{...}` и пустой массив параметров.
+     * Ожидается, что исключение не выбрасывается, запрос остаётся как есть,
+     * а значения (values) остаются пустыми.
+     */
+    public function testPlainQueryWithoutPlaceholders(): void
+    {
+        $dto = new QueryParamDTO('SELECT * FROM users', []);
+
+        $this->assertSame([], $dto->values);
+        $this->assertSame('SELECT * FROM users', $dto->query);
+    }
+
+    /**
+     * Один и тот же плейсхолдер встречается дважды со скалярным значением.
+     * Ожидается, что оба вхождения заменяются на два уникальных именованных
+     * параметра, а фигурные скобки в запросе не остаются.
+     */
+    public function testDuplicateScalarPlaceholder(): void
+    {
+        $dto = new QueryParamDTO('{item}{item}', ['item' => 1]);
+
+        $this->assertCount(2, $dto->values);
+        $this->assertSame(false, \strpos($dto->query, '{'));
+        $this->assertSame(false, \strpos($dto->query, '}'));
+        $this->assertSame(2, \substr_count($dto->query, ':'));
+    }
+
+    /**
+     * Дублированный плейсхолдер с объектом ByteParamDTO.
+     * Ожидается, что объект клонируется для каждого вхождения (значения не
+     * ссылаются на исходный объект), а фигурные скобки в запросе не остаются.
+     */
+    public function testDuplicateByteParamDTO(): void
+    {
+        $byte = new ByteParamDTO('byte');
+        $dto = new QueryParamDTO('{item}{item}', ['item' => $byte]);
+
+        $this->assertCount(2, $dto->values);
+        foreach ($dto->values as $value) {
+            $this->assertInstanceOf(ByteParamDTO::class, $value);
+            $this->assertNotSame($byte, $value);
+        }
+        $this->assertSame(false, \strpos($dto->query, '{'));
+        $this->assertSame(false, \strpos($dto->query, '}'));
+    }
+
+    /**
+     * Оператор IN с массивом объектов ByteParamDTO.
+     * Ожидается, что каждый объект клонируется в отдельный именованный параметр,
+     * в запросе остаётся одна запятая между ними, а фигурные скобки убраны.
+     */
+    public function testInOperatorWithByteParamDTO(): void
+    {
+        $dto = new QueryParamDTO('{item}', [
+            'item' => [new ByteParamDTO('a'), new ByteParamDTO('b')],
+        ]);
+
+        $this->assertCount(2, $dto->values);
+        foreach ($dto->values as $value) {
+            $this->assertInstanceOf(ByteParamDTO::class, $value);
+        }
+        $this->assertSame(false, \strpos($dto->query, '{'));
+        $this->assertSame(false, \strpos($dto->query, '}'));
+        $this->assertSame(1, \substr_count($dto->query, ','));
+    }
+
+    /**
+     * Дублированный плейсхолдер с неподдерживаемым объектом (stdClass).
+     * Ожидается InvalidArgumentException с сообщением, начинающимся с "IPDO:".
+     */
+    public function testDuplicateBadObjectThrows(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessageMatches('#^IPDO\:#');
+
+        new QueryParamDTO('{item}{item}', [
+            'item' => new \stdClass,
         ]);
     }
 }
