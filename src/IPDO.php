@@ -196,7 +196,7 @@ abstract class IPDO
      */
     function isConnected(): bool
     {
-        return $this->connect !== null;
+        return null !== $this->connect;
     }
 
     /**
@@ -205,7 +205,7 @@ abstract class IPDO
      */
     function hasConnect(): bool
     {
-        return $this->connect !== null;
+        return null !== $this->connect;
     }
 
     /**
@@ -245,7 +245,7 @@ abstract class IPDO
     }
 
     /**
-     * @param \Closure(static): mixed $callable
+     * @param \Closure(static):void $callable
      * @return static
      * @throws IPDOException|\Throwable
      */
@@ -437,28 +437,32 @@ abstract class IPDO
 
     /**
      * @param PDOStatement $stm
-     * @return void
      */
-    protected function setBindParams(PDOStatement $stm, QueryParamDTO $queryParam)
+    protected function setBindParams(PDOStatement $stm, QueryParamDTO $queryParam): void
     {
         /** @var array<string,Param> $values */
-        $values = $queryParam->values;
+        $values = &$queryParam->values;
         // &$val требование от bindParam https://www.php.net/manual/ru/pdostatement.bindparam.php#98145
         foreach ($values as $key => &$val) {
             $mask = ':' . $key;
-            if ($val instanceof ByteParamDTO) {
+            $type = \gettype($val);
+            if ('object' === $type && $val instanceof ByteParamDTO) {
                 $val = $val->getValue();
                 $stm->bindParam($mask, $val, PDO::PARAM_LOB);
-            } elseif (\is_bool($val)) {
+            } elseif ('boolean' === $type) {
+                /** @var bool $val */
+
                 $stm->bindParam($mask, $val, PDO::PARAM_BOOL);
-            } elseif (\is_int($val) || \is_string($val)) {
+            } elseif ('integer' === $type || 'string' === $type) {
+                /** @var int|string $val */
+
                 if (Util::isIntPHP($val)) {
                     $val = \intval($val);
                     $stm->bindParam($mask, $val, PDO::PARAM_INT);
                 } else {
                     $stm->bindParam($mask, $val, PDO::PARAM_STR);
                 }
-            } elseif ($val === null) {
+            } elseif (null === $val) {
                 $stm->bindParam($mask, $val, PDO::PARAM_NULL);
             } else {
                 $val = \strval($val);
