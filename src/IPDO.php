@@ -94,6 +94,16 @@ abstract class IPDO
     }
 
     /**
+     * @param array<string,Param|ParamIN[]> $values
+     */
+    function exists(string $query, array $values = []): bool
+    {
+        $sql = \sprintf('SELECT EXISTS (%s) AS `0`', $query);
+        $result = $this->exec($sql, $values, self::FETCH_ONCE_NUM);
+        return (bool) $result[0];
+    }
+
+    /**
      * получить статус последнего запроса. В случаи отсутствия запроса выдаст false
      */
     function status(): bool
