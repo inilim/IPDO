@@ -20,11 +20,30 @@ class IPDOSQLite extends IPDO
    }
 
    /**
+    * @return (array{cid:int,name:string,type:string,notnull:0|1,dflt_value:null|string|int|float,pk:0|1})[]
+    */
+   function tableInfo(string $tableName): array
+   {
+      if (!\preg_match('/^[\p{L}\p{N}_-]+$/ui', $tableName)) {
+         throw new IPDOException(\sprintf('Invalid table name "%s"', $tableName));
+      }
+      return $this->exec(\sprintf('pragma table_info("%s")', $tableName), [], self::FETCH_ALL);
+   }
+
+   /**
+    * @return (array{seq:int,name:string,file:string})[]
+    */
+   function databaseList(): array
+   {
+      return $this->exec('pragma database_list', [], self::FETCH_ALL);
+   }
+
+   /**
     * get version sqlite
     */
    function getVersion(): string
    {
-      return \strval($this->exec('SELECT sqlite_version() AS ver', [], self::FETCH_ONCE)['ver']);
+      return \strval($this->exec('SELECT sqlite_version() AS "0"', [], self::FETCH_ONCE)[0]);
    }
 
    /**
@@ -57,9 +76,9 @@ class IPDOSQLite extends IPDO
    }
 
    /**
-* @see https://www.php.net/manual/ru/pdo-sqlite.createcollation.php
-     * @param callable(string $string1,string $string2):int $callback
-     * @return static
+    * @see https://www.php.net/manual/ru/pdo-sqlite.createcollation.php
+    * @param callable(string $string1,string $string2):int $callback
+    * @return static
     */
    function createCollation(string $name, callable $callback)
    {
@@ -120,8 +139,8 @@ class IPDOSQLite extends IPDO
    function pragmaCompileOptions(): array
    {
       /** @var (array{_: string})[] $options */
-      $options = $this->exec('SELECT compile_options as _ FROM pragma_compile_options', [], self::FETCH_ALL);
-      return \array_column($options, '_');
+      $options = $this->exec('SELECT compile_options as "0" FROM pragma_compile_options', [], self::FETCH_ALL);
+      return \array_column($options, 0);
    }
 
    /**
@@ -144,13 +163,13 @@ class IPDOSQLite extends IPDO
       return $this->vacuumInto($pathToFile);
    }
 
-/**
-     * В момент создания PDO может выбросить исключение \PDOException
-     * @throws IPDOException
-     * @throws \PDOException
-     * @phpstan-assert !null $this->connect
-     */
-    protected function connectDB(): void
+   /**
+    * В момент создания PDO может выбросить исключение \PDOException
+    * @throws IPDOException
+    * @throws \PDOException
+    * @phpstan-assert !null $this->connect
+    */
+   protected function connectDB(): void
    {
       if (null !== $this->connect) {
          return;
