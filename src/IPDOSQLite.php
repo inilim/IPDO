@@ -19,6 +19,125 @@ class IPDOSQLite extends IPDO
       $this->options = $options;
    }
 
+   // ATTACH START
+
+   /**
+    * @param string|IPDOSQLite $db
+    *
+    * @throws IPDOException
+    * @throws \InvalidArgumentException
+    */
+   function attachDb($db, string $name): self
+   {
+      if (\in_array($name, ['', 'main', 'temp'], true)) {
+         throw new \InvalidArgumentException('Database name cannot be empty, "main", or "temp".');
+      }
+
+      $this->exec('ATTACH DATABASE {db} AS {name}', [
+         'name' => $name,
+         'db' => $this->getPtfDb($db),
+      ]);
+
+      return $this;
+   }
+
+   /**
+    * @throws IPDOException
+    * @throws \InvalidArgumentException
+    */
+   function detachDbByName(string $name): self
+   {
+      if (\in_array($name, ['', 'main', 'temp'], true)) {
+         throw new \InvalidArgumentException('Database name cannot be empty, "main", or "temp".');
+      }
+      $this->exec('DETACH DATABASE {name}', ['name' => $name]);
+      return $this;
+   }
+
+   /**
+    * @param string|IPDOSQLite $db
+    * @throws IPDOException
+    * @throws \InvalidArgumentException
+    */
+   function detachDbByDb($db): self
+   {
+      $name = $this->exec('SELECT [name] FROM pragma_database_list WHERE [name] != "main" AND [file] = {file}', [
+         'file' => $this->getPtfDb($db),
+      ], self::FETCH_ONCE_NUM);
+      $name = $name[0] ?? null;
+
+      if (\is_string($name)) {
+         try {
+            $this->exec('DETACH DATABASE {name}', ['name' => $name]);
+         } catch (IPDOException $e) {
+            // skip race
+            $message = $e->getMessage();
+            if (\strpos($message, 'no such database') === false) {
+               throw $e;
+            }
+         }
+      }
+
+      return $this;
+   }
+
+   function hasAttachDbByName(string $name): bool
+   {
+      if (\in_array($name, ['', 'main', 'temp'], true)) {
+         return false;
+      }
+      return $this->exists('SELECT * FROM pragma_database_list WHERE [name] = {name}', [
+         'name' => $name,
+      ]);
+   }
+
+   /**
+    * @param string|IPDOSQLite $db
+    */
+   function hasAttachDbByDb($db): bool
+   {
+      return $this->exists('SELECT * FROM pragma_database_list WHERE [name] != "main" AND [file] = {file}', [
+         'file' => $this->getPtfDb($db),
+      ]);
+   }
+
+   /**
+    * @return (array{name:string,file:string})[]
+    */
+   function databaseListAttach(): array
+   {
+      return $this->exec('SELECT [name], [file] FROM pragma_database_list WHERE [name] not in ("main","temp")', [], self::FETCH_ALL);
+   }
+
+   /**
+    * @param string|IPDOSQLite $db
+    * @throws \InvalidArgumentException
+    */
+   protected function getPtfDb($db): string
+   {
+      if ($db instanceof IPDOSQLite) {
+         $db = $db->getMainFile();
+         if ('' === $db) {
+            throw new \InvalidArgumentException('The IPDOSQLite object does not have a main file path.');
+         }
+      } elseif (!\is_string($db)) {
+         throw new \InvalidArgumentException('Database parameter must be a string or an instance of IPDOSQLite.');
+      } else {
+         // TODO URI format
+         $real = (new \SplFileInfo($db))->getRealPath();
+         if (false === $real) {
+            throw new \InvalidArgumentException(\sprintf('File database not found "%s"', $db));
+         }
+         $db = $real;
+      }
+
+      // $db = \strtr($db, '\\', '/');
+
+      return $db;
+   }
+
+   // ATTACH END
+
    /**
     * @return (array{cid:int,name:string,type:string,notnull:0|1,dflt_value:null|string|int|float,pk:0|1})[]
     */
