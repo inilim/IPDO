@@ -35,6 +35,9 @@ class IPDOSQLite extends IPDO
       return $this->exec('SELECT * FROM pragma_database_list', [], self::FETCH_ALL);
    }
 
+   /**
+    * The absolute file path of the database file on disk. This will be an empty string if the database is in-memory or not associated with a physical file.
+    */
    function getMainFile(): string
    {
       return \strval(
