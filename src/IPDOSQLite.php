@@ -24,10 +24,7 @@ class IPDOSQLite extends IPDO
     */
    function tableInfo(string $tableName): array
    {
-      if (!\preg_match('/^[\p{L}\p{N}_-]+$/ui', $tableName)) {
-         throw new IPDOException(\sprintf('Invalid table name "%s"', $tableName));
-      }
-      return $this->exec(\sprintf('pragma table_info("%s")', $tableName), [], self::FETCH_ALL);
+      return $this->exec('SELECT * FROM pragma_table_info({tbl})', ['tbl' => $tableName], self::FETCH_ALL);
    }
 
    /**
@@ -35,7 +32,14 @@ class IPDOSQLite extends IPDO
     */
    function databaseList(): array
    {
-      return $this->exec('pragma database_list', [], self::FETCH_ALL);
+      return $this->exec('SELECT * FROM pragma_database_list', [], self::FETCH_ALL);
+   }
+
+   function getMainFile(): string
+   {
+      return \strval(
+         $this->exec('SELECT [file] FROM pragma_database_list WHERE [name] = "main"', [], self::FETCH_ONCE_NUM)[0]
+      );
    }
 
    /**
