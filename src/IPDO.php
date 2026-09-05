@@ -16,6 +16,7 @@ use Inilim\IPDO\Exception\IPDOException;
  * @psalm-import-type Param from QueryParamDTO
  * @psalm-import-type ParamIN from QueryParamDTO
  * 
+ * @psalm-type TYPE_FETCH_VOID     = void
  * @psalm-type TYPE_FETCH_ONCE     = array<string,string|null|float|int>
  * @psalm-type TYPE_FETCH_ALL      = (array<string,string|null|float|int>)[]
  * @psalm-type TYPE_FETCH_ONCE_NUM = (string|null|float|int)[]
@@ -31,7 +32,8 @@ abstract class IPDO
         FETCH_ALL_NUM     = 3,
         FETCH_ONCE_NUM    = 4,
         FETCH_GENERATOR_ASSOC = 5,
-        FETCH_GENERATOR_NUM = 6
+        FETCH_GENERATOR_NUM = 6,
+        FETCH_VOID = 7
         // 
     ;
 
@@ -66,9 +68,9 @@ abstract class IPDO
 
     /**
      * @param self::FETCH_*|array<string,Param|ParamIN[]> $values
-     * @param self::FETCH_* $fetch default self::FETCH_IPDO_RESULT
+     * @param self::FETCH_* $fetch default self::FETCH_VOID
      * 
-     * @return ($fetch is 1 ? TYPE_FETCH_ONCE : ($fetch is 2 ? TYPE_FETCH_ALL : ($fetch is 4 ? TYPE_FETCH_ONCE_NUM : ($fetch is 3 ? TYPE_FETCH_ALL_NUM : ($fetch is 5 ? TYPE_FETCH_GENERATOR_ASSOC : ($fetch is 6 ? TYPE_FETCH_GENERATOR_NUM : IPDOResult))))))
+     * @return ($fetch is 1 ? TYPE_FETCH_ONCE : ($fetch is 2 ? TYPE_FETCH_ALL : ($fetch is 4 ? TYPE_FETCH_ONCE_NUM : ($fetch is 3 ? TYPE_FETCH_ALL_NUM : ($fetch is 5 ? TYPE_FETCH_GENERATOR_ASSOC : ($fetch is 6 ? TYPE_FETCH_GENERATOR_NUM : ($fetch is 7 ? TYPE_FETCH_VOID : IPDOResult)))))))
      * 
      * @throws \InvalidArgumentException
      * @throws IPDOException
@@ -76,7 +78,7 @@ abstract class IPDO
     function exec(
         string $query,
         $values    = [],
-        int $fetch = self::FETCH_IPDO_RESULT
+        int $fetch = self::FETCH_VOID
     ) {
         if (\is_int($values)) {
             $fetch  = $values;
@@ -299,26 +301,29 @@ abstract class IPDO
 
     /**
      * @param self::FETCH_* $fetch
-     * @return IPDOResult|TYPE_FETCH_ALL|TYPE_FETCH_ALL_NUM|TYPE_FETCH_ONCE|TYPE_FETCH_ONCE_NUM|TYPE_FETCH_GENERATOR_ASSOC|TYPE_FETCH_GENERATOR_NUM
+     * @return IPDOResult|TYPE_FETCH_ALL|TYPE_FETCH_ALL_NUM|TYPE_FETCH_ONCE|TYPE_FETCH_ONCE_NUM|TYPE_FETCH_GENERATOR_ASSOC|TYPE_FETCH_GENERATOR_NUM|TYPE_FETCH_VOID
      */
     protected function fetchResult(IPDOResult $result, int $fetch)
     {
-        if ($fetch === self::FETCH_IPDO_RESULT) {
+        if (self::FETCH_VOID === $fetch) {
+            return;
+        }
+        if (self::FETCH_IPDO_RESULT === $fetch) {
             return $result;
         }
 
         $stm = $result->getStatement();
         try {
-            if ($fetch === self::FETCH_ONCE_NUM) {
+            if (self::FETCH_ONCE_NUM === $fetch) {
                 /** @var TYPE_FETCH_ONCE_NUM|false $list */
                 $list = $stm->fetch(PDO::FETCH_NUM);
-            } elseif ($fetch === self::FETCH_ONCE) {
+            } elseif (self::FETCH_ONCE === $fetch) {
                 /** @var TYPE_FETCH_ONCE|false $list */
                 $list = $stm->fetch(PDO::FETCH_ASSOC);
-            } elseif ($fetch === self::FETCH_ALL) {
+            } elseif (self::FETCH_ALL === $fetch) {
                 /** @var TYPE_FETCH_ALL $list */
                 $list = $stm->fetchAll(PDO::FETCH_ASSOC);
-            } elseif ($fetch === self::FETCH_ALL_NUM) {
+            } elseif (self::FETCH_ALL_NUM === $fetch) {
                 /** @var TYPE_FETCH_ALL_NUM $list */
                 $list = $stm->fetchAll(PDO::FETCH_NUM);
             } else {
