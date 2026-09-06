@@ -151,6 +151,16 @@ class IPDOSQLite extends IPDO
       return $this->exists('SELECT * FROM sqlite_master WHERE [type] = "table" AND tbl_name = {tbl}', ['tbl' => $tableName]);
    }
 
+   function existsView(string $tableName): bool
+   {
+      return $this->exists('SELECT * FROM sqlite_master WHERE [type] = "view" AND tbl_name = {tbl}', ['tbl' => $tableName]);
+   }
+
+   function dataVersion(): int
+   {
+      return (int)$this->exec('SELECT data_version FROM pragma_data_version', [], self::FETCH_ONCE_NUM)[0];
+   }
+
    /**
     * @return (array{seq:int,name:string,file:string})[]
     */
