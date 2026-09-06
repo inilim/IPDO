@@ -146,6 +146,11 @@ class IPDOSQLite extends IPDO
       return $this->exec('SELECT * FROM pragma_table_info({tbl})', ['tbl' => $tableName], self::FETCH_ALL);
    }
 
+   function existsTable(string $tableName): bool
+   {
+      return $this->exists('SELECT * FROM sqlite_master WHERE [type] = "table" AND tbl_name = {tbl}', ['tbl' => $tableName]);
+   }
+
    /**
     * @return (array{seq:int,name:string,file:string})[]
     */
