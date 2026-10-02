@@ -7,6 +7,9 @@ namespace Inilim\IPDO;
 use Inilim\IPDO\IPDO;
 use Inilim\IPDO\Exception\IPDOException;
 
+/**
+ * @psalm-import-type TYPE_FN_EXEC from IPDO
+ */
 class IPDOSQLite extends IPDO
 {
    /**
@@ -316,30 +319,32 @@ class IPDOSQLite extends IPDO
          return;
       }
 
-      if (\strpos($this->nameDB, 'sqlite:') === 0) {
-         $this->nameDB = Util::replaceFirst('sqlite:', '', $this->nameDB);
+      $nameDB = &$this->nameDB;
+
+      if (\strpos($nameDB, 'sqlite:') === 0) {
+         $nameDB = Util::replaceFirst('sqlite:', '', $nameDB);
       }
 
-      if (\strpos($this->nameDB, ':memory:') === 0) {
+      if (\strpos($nameDB, ':memory:') === 0) {
          // skip
       }
       // 
-      elseif (\strpos($this->nameDB, 'file:') === 0) {
+      elseif (\strpos($nameDB, 'file:') === 0) {
          if (\PHP_VERSION_ID < 80100) {
             throw new IPDOException([
                'message' => \sprintf(
                   'IPDO: URI not supported "%s". PHP >=8.1',
-                  $this->nameDB,
+                  $nameDB,
                ),
             ]);
          }
       }
       // 
-      elseif (!\is_file($this->nameDB)) {
+      elseif (!\is_file($nameDB)) {
          throw new IPDOException([
             'message' => \sprintf(
                'IPDO: File not found "%s"',
-               $this->nameDB,
+               $nameDB,
             ),
          ]);
       }
@@ -352,7 +357,7 @@ class IPDOSQLite extends IPDO
 
       $this->countConnect++;
       $this->connect = new \PDO(
-         'sqlite:' . $this->nameDB,
+         'sqlite:' . $nameDB,
          null,
          null,
          $this->options

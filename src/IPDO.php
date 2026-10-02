@@ -23,6 +23,8 @@ use Inilim\IPDO\Exception\IPDOException;
  * @psalm-type TYPE_FETCH_ALL_NUM  = ((string|null|float|int)[])[]
  * @psalm-type TYPE_FETCH_GENERATOR_ASSOC = \Generator<int,array<string,string|null|float|int>>
  * @psalm-type TYPE_FETCH_GENERATOR_NUM = \Generator<int,array<int,string|null|float|int>>
+ * 
+ * @psalm-type TYPE_FN_EXEC = ($fetch is 1 ? TYPE_FETCH_ONCE : ($fetch is 2 ? TYPE_FETCH_ALL : ($fetch is 4 ? TYPE_FETCH_ONCE_NUM : ($fetch is 3 ? TYPE_FETCH_ALL_NUM : ($fetch is 5 ? TYPE_FETCH_GENERATOR_ASSOC : ($fetch is 6 ? TYPE_FETCH_GENERATOR_NUM : ($fetch is 7 ? TYPE_FETCH_VOID : IPDOResult)))))))
  */
 abstract class IPDO
 {
@@ -70,7 +72,7 @@ abstract class IPDO
      * @param self::FETCH_*|array<string,Param|ParamIN[]> $values
      * @param self::FETCH_* $fetch default self::FETCH_VOID
      * 
-     * @return ($fetch is 1 ? TYPE_FETCH_ONCE : ($fetch is 2 ? TYPE_FETCH_ALL : ($fetch is 4 ? TYPE_FETCH_ONCE_NUM : ($fetch is 3 ? TYPE_FETCH_ALL_NUM : ($fetch is 5 ? TYPE_FETCH_GENERATOR_ASSOC : ($fetch is 6 ? TYPE_FETCH_GENERATOR_NUM : ($fetch is 7 ? TYPE_FETCH_VOID : IPDOResult)))))))
+     * @return TYPE_FN_EXEC
      * 
      * @throws \InvalidArgumentException
      * @throws IPDOException
