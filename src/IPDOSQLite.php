@@ -4,11 +4,14 @@ declare(strict_types=1);
 
 namespace Inilim\IPDO;
 
-use Inilim\IPDO\IPDO;
+use Inilim\IPDO\DTO\QueryParamDTO;
 use Inilim\IPDO\Exception\IPDOException;
+use Inilim\IPDO\IPDO;
 
 /**
  * @psalm-import-type TYPE_FN_EXEC from IPDO
+ * @psalm-import-type TYPE_PARAM from QueryParamDTO
+ * @psalm-import-type TYPE_PARAM_IN from QueryParamDTO
  * 
  * @psalm-type TYPE_TABLE_INFO = array{cid:int,name:string,type:string,notnull:0|1,dflt_value:null|string|int|float,pk:0|1}
  * @psalm-type TYPE_SEQUENCE = array{name:string,seq:int}
@@ -25,6 +28,52 @@ class IPDOSQLite extends IPDO
    {
       $this->nameDB  = $pathToFile;
       $this->options = $options;
+   }
+
+   /**
+    * Выполняет запрос, учитывая блокировки БД SQLite (SQLITE_BUSY / SQLITE_LOCKED),
+    * повторяя попытку до {@see $attempts} раз.
+    *
+    * @param array<string,TYPE_PARAM|TYPE_PARAM_IN[]> $values
+    * @param self::FETCH_* $fetch default self::FETCH_VOID
+    * @param int $attempts общее количество попыток (>= 1)
+    *
+    * @return TYPE_FN_EXEC
+    *
+    * @throws \InvalidArgumentException
+    * @throws IPDOException
+    */
+   function execBusyRetry(
+      string $query,
+      $values    = [],
+      int $fetch  = self::FETCH_VOID,
+      int $attempts = 5
+   ) {
+      if ($attempts < 1) {
+         throw new \InvalidArgumentException('The number of attempts must be greater than or equal to 1.');
+      }
+
+      $lastError = null;
+
+      for ($i = 1; $i <= $attempts; $i++) {
+         try {
+            return $this->exec($query, $values, $fetch);
+         } catch (IPDOException $e) {
+            $lastError = $e;
+
+            // ретраим только ошибки, связанные с блокировкой БД
+            if (\stripos($e->getMessage(), 'locked') === false) {
+               throw $e;
+            }
+
+            if ($i === $attempts) {
+               break;
+            }
+         }
+      }
+
+      /** @var IPDOException $lastError */
+      throw $lastError;
    }
 
    // ATTACH START
