@@ -123,20 +123,30 @@ class IPDOSQLite extends IPDO
          if ('' === $db) {
             throw new \InvalidArgumentException('The IPDOSQLite object does not have a main file path.');
          }
+
+         return $db;
       } elseif (!\is_string($db)) {
          throw new \InvalidArgumentException('Database parameter must be a string or an instance of IPDOSQLite.');
-      } else {
-         // TODO URI format
-         $real = (new \SplFileInfo($db))->getRealPath();
-         if (false === $real) {
-            throw new \InvalidArgumentException(\sprintf('File database not found "%s"', $db));
-         }
-         $db = $real;
       }
 
-      // $db = \strtr($db, '\\', '/');
+      if (\strncasecmp($db, 'file:', 5) === 0) {
+         $db = \parse_url($db);
 
-      return $db;
+         // In-memory databases have no file on disk.
+         $db = $db['path'] ?? '';
+         if ('' === $db || ':memory:' === $db) {
+            throw new \InvalidArgumentException('Cannot attach an in-memory database by URI.');
+         }
+
+         $db = \rawurldecode($db);
+      }
+
+      $real = (new \SplFileInfo($db))->getRealPath();
+      if (false === $real) {
+         throw new \InvalidArgumentException(\sprintf('File database not found "%s"', $db));
+      }
+
+      return $real;
    }
 
    // ATTACH END

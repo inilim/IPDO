@@ -20,7 +20,7 @@ final class Util
     }
 
     /**
-     * TODO данный метод взят из библиотеки inilim/tools
+     * INFO данный метод взят из библиотеки inilim/tools
      * @param mixed $v
      */
     static function isIntPHP($v): bool
@@ -36,7 +36,7 @@ final class Util
     }
 
     /**
-     * TODO данный метод взят из библиотеки inilim/tools
+     * INFO данный метод взят из библиотеки inilim/tools
      * @param mixed $v
      */
     static function isNumeric($v): bool
