@@ -9,6 +9,11 @@ use Inilim\IPDO\Exception\IPDOException;
 
 /**
  * @psalm-import-type TYPE_FN_EXEC from IPDO
+ * 
+ * @psalm-type TYPE_TABLE_INFO = array{cid:int,name:string,type:string,notnull:0|1,dflt_value:null|string|int|float,pk:0|1}
+ * @psalm-type TYPE_SEQUENCE = array{name:string,seq:int}
+ * @psalm-type TYPE_MASTER = array{type:string,name:string,tbl_name:string,rootpage:int,sql:string}
+ * @psalm-type TYPE_DB_LIST = array{seq:int,name:string,file:string}
  */
 class IPDOSQLite extends IPDO
 {
@@ -152,7 +157,7 @@ class IPDOSQLite extends IPDO
    // ATTACH END
 
    /**
-    * @return (array{cid:int,name:string,type:string,notnull:0|1,dflt_value:null|string|int|float,pk:0|1})[]
+    * @return TYPE_TABLE_INFO[]
     */
    function tableInfo(string $tableName): array
    {
@@ -175,7 +180,7 @@ class IPDOSQLite extends IPDO
    }
 
    /**
-    * @return (array{seq:int,name:string,file:string})[]
+    * @return TYPE_DB_LIST[]
     */
    function databaseList(): array
    {
@@ -244,7 +249,7 @@ class IPDOSQLite extends IPDO
    }
 
    /**
-    * @return (array{type:string,name:string,tbl_name:string,rootpage:int,sql:string})[]
+    * @return TYPE_MASTER[]
     */
    function master(?string $type = null, ?string $name = null, ?string $tblName = null): array
    {
@@ -270,18 +275,18 @@ class IPDOSQLite extends IPDO
          $sql .= ' WHERE ' . \implode(' AND ', $where);
       }
 
-      /** @var (array{type:string,name:string,tbl_name:string,rootpage:int,sql:string})[] $result */
+      /** @var TYPE_MASTER[] $result */
       $result = $this->exec($sql, $opts, self::FETCH_ALL);
 
       return $result;
    }
 
    /**
-    * @return (array{name:string,seq:int})[]
+    * @return TYPE_SEQUENCE[]
     */
    function sequence(): array
    {
-      /** @var (array{name:string,seq:int})[] $result */
+      /** @var TYPE_SEQUENCE[] $result */
       $result = $this->exec('SELECT * FROM sqlite_sequence', [], self::FETCH_ALL);
 
       return $result;
