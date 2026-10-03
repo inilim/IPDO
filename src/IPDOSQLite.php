@@ -339,7 +339,7 @@ class IPDOSQLite extends IPDO
          // skip
       }
       // 
-      elseif (\strpos($nameDB, 'file:') === 0) {
+      elseif (\strncasecmp($nameDB, 'file:', 5) === 0) {
          if (\PHP_VERSION_ID < 80100) {
             throw new IPDOException([
                'message' => \sprintf(
