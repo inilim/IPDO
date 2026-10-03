@@ -10,8 +10,8 @@ use InvalidArgumentException;
 
 /**
  * @psalm-mutation-free
- * @psalm-type Param   = string|null|int|float|bool|ByteParamDTO
- * @psalm-type ParamIN = string|int|float|bool|ByteParamDTO
+ * @psalm-type TYPE_PARAM   = string|null|int|float|bool|ByteParamDTO
+ * @psalm-type TYPE_PARAM_IN = string|int|float|bool|ByteParamDTO
  * @internal
  */
 final class QueryParamDTO
@@ -22,12 +22,12 @@ final class QueryParamDTO
 
     public string $query;
     /**
-     * @var array<string,Param|ParamIN[]>
+     * @var array<string,TYPE_PARAM|TYPE_PARAM_IN[]>
      */
     public array $values;
 
     /**
-     * @param array<string,Param|ParamIN[]> $values
+     * @param array<string,TYPE_PARAM|TYPE_PARAM_IN[]> $values
      * @throws InvalidArgumentException
      */
     function __construct(
@@ -126,7 +126,7 @@ final class QueryParamDTO
                     }
                     // INFO тут же обрабатываем массив значений
                     elseif ('array' === $type) {
-                        /** @var ParamIN[] $value */
+                        /** @var TYPE_PARAM[] $value */
                         $this->prepareSubValueArrayToInOperator($name, $value);
                         continue; // continue чтобы не выполнить нижний replaceFirst
                     } else {
@@ -142,7 +142,7 @@ final class QueryParamDTO
             else {
                 // INFO тут же обрабатываем массив значений
                 if ('array' === $type) {
-                    /** @var ParamIN[] $value */
+                    /** @var TYPE_PARAM_IN[] $value */
                     $this->prepareSubValueArrayToInOperator($name, $value);
                 } else {
                     $newName = $this->getNewName();
@@ -171,7 +171,7 @@ final class QueryParamDTO
     // ---------------------------------------------
 
     /**
-     * @param ParamIN[] $rawValue
+     * @param TYPE_PARAM_IN[] $rawValue
      */
     protected function prepareSubValueArrayToInOperator(string $oldName, array $rawValue): void
     {

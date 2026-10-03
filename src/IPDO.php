@@ -13,8 +13,8 @@ use Inilim\IPDO\DTO\QueryParamDTO;
 use Inilim\IPDO\Exception\IPDOException;
 
 /**
- * @psalm-import-type Param from QueryParamDTO
- * @psalm-import-type ParamIN from QueryParamDTO
+ * @psalm-import-type TYPE_PARAM from QueryParamDTO
+ * @psalm-import-type TYPE_PARAM_IN from QueryParamDTO
  * 
  * @psalm-type TYPE_FETCH_VOID     = void
  * @psalm-type TYPE_FETCH_ONCE     = array<string,string|null|float|int>
@@ -69,7 +69,7 @@ abstract class IPDO
     protected ?string $rawLastInsertID = null;
 
     /**
-     * @param self::FETCH_*|array<string,Param|ParamIN[]> $values
+     * @param self::FETCH_*|array<string,TYPE_PARAM|TYPE_PARAM_IN[]> $values
      * @param self::FETCH_* $fetch default self::FETCH_VOID
      * 
      * @return TYPE_FN_EXEC
@@ -98,7 +98,7 @@ abstract class IPDO
     }
 
     /**
-     * @param array<string,Param|ParamIN[]> $values
+     * @param array<string,TYPE_PARAM|TYPE_PARAM_IN[]> $values
      */
     function exists(string $query, array $values = []): bool
     {
@@ -457,7 +457,7 @@ abstract class IPDO
      */
     protected function setBindParams(PDOStatement $stm, QueryParamDTO $queryParam): void
     {
-        /** @var array<string,Param> $values */
+        /** @var array<string,TYPE_PARAM> $values */
         $values = &$queryParam->values;
         // &$val требование от bindParam https://www.php.net/manual/ru/pdostatement.bindparam.php#98145
         foreach ($values as $key => &$val) {

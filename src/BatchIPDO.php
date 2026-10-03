@@ -10,8 +10,8 @@ use Inilim\IPDO\IPDO;
 
 /**
  * @deprecated Experimental class, not recommended for use in production
- * @psalm-import-type Param from QueryParamDTO
- * @psalm-import-type ParamIN from QueryParamDTO
+ * @psalm-import-type TYPE_PARAM from QueryParamDTO
+ * @psalm-import-type TYPE_PARAM_IN from QueryParamDTO
  * Класс для выполнения батч-транзакций.
  */
 class BatchIPDO
@@ -45,7 +45,7 @@ class BatchIPDO
      * При достижении лимита текущая транзакция коммитится и начинается новая.
      *
      * @param string $query SQL-запрос
-     * @param IPDO::FETCH_*|array<string,Param|ParamIN[]> $values параметры или режим fetch (совместимо с IPDO::exec)
+     * @param IPDO::FETCH_*|array<string,TYPE_PARAM|TYPE_PARAM_IN[]> $values параметры или режим fetch (совместимо с IPDO::exec)
      * @param IPDO::FETCH_* $fetch режим выборки
      * @return mixed результат, аналогичный IPDO::exec
      * @throws \Throwable если запрос не удался – транзакция откатывается, исключение пробрасывается
