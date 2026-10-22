@@ -4,14 +4,14 @@ declare(strict_types=1);
 
 namespace Inilim\IPDO;
 
-use Inilim\IPDO\DTO\QueryParamDTO;
 use Inilim\IPDO\Exception\IPDOException;
 use Inilim\IPDO\IPDO;
 
 /**
  * @deprecated Experimental class, not recommended for use in production
- * @psalm-import-type TYPE_PARAM from QueryParamDTO
- * @psalm-import-type TYPE_PARAM_IN from QueryParamDTO
+ * @psalm-import-type TYPE_PARAM from \Inilim\IPDO\DTO\QueryParamDTO
+ * @psalm-import-type TYPE_PARAM_IN from \Inilim\IPDO\DTO\QueryParamDTO
+ * @psalm-import-type TYPE_FN_EXEC from IPDO
  * Класс для выполнения батч-транзакций.
  */
 class BatchIPDO
@@ -46,11 +46,11 @@ class BatchIPDO
      *
      * @param string $query SQL-запрос
      * @param IPDO::FETCH_*|array<string,TYPE_PARAM|TYPE_PARAM_IN[]> $values параметры или режим fetch (совместимо с IPDO::exec)
-     * @param IPDO::FETCH_* $fetch режим выборки
-     * @return mixed результат, аналогичный IPDO::exec
+     * @param IPDO::FETCH_* $fetch default IPDO::FETCH_VOID
+     * @return TYPE_FN_EXEC
      * @throws \Throwable если запрос не удался – транзакция откатывается, исключение пробрасывается
      */
-    function exec(string $query, $values = [], int $fetch = IPDO::FETCH_IPDO_RESULT)
+    function exec(string $query, $values = [], int $fetch = IPDO::FETCH_VOID)
     {
         // Если внешняя транзакция уже активна, мы не можем управлять батчами.
         // В этом случае просто выполняем запрос без счётчика, но с предупреждением.
