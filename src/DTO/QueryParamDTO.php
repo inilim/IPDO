@@ -41,7 +41,9 @@ final class QueryParamDTO
         // в каждой строке отбрасываем "--" и всё, что после него.
         // {name} внутри "--" комментария параметром больше не считается.
         $lines = \preg_split('/\r\n|\r|\n/', $query);
-        /** @var string[] $lines */
+        if (false === $lines) {
+            throw new \RuntimeException('IPDO: Failed to split the query into lines.');
+        }
         foreach ($lines as &$line) {
             $pos = \strpos($line, '--');
             if (false !== $pos) {
@@ -144,7 +146,7 @@ final class QueryParamDTO
                     }
                     // INFO тут же обрабатываем массив значений
                     elseif ('array' === $type) {
-                        /** @var TYPE_PARAM[] $value */
+                        /** @var TYPE_PARAM_IN[] $value */
                         $this->prepareSubValueArrayToInOperator($name, $value);
                         continue; // continue чтобы не выполнить нижний replaceFirst
                     } else {

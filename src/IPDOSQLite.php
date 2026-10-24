@@ -17,6 +17,7 @@ use Inilim\IPDO\IPDO;
  * @psalm-type TYPE_SEQUENCE = array{name:string,seq:int}
  * @psalm-type TYPE_MASTER = array{type:string,name:string,tbl_name:string,rootpage:int,sql:string}
  * @psalm-type TYPE_DB_LIST = array{seq:int,name:string,file:string}
+ * @psalm-type TYPE_DATABASE_LIST_ATTACH_ITEM = array{name:string,file:string}
  */
 class IPDOSQLite extends IPDO
 {
@@ -159,11 +160,13 @@ class IPDOSQLite extends IPDO
    }
 
    /**
-    * @return (array{name:string,file:string})[]
+    * @return TYPE_DATABASE_LIST_ATTACH_ITEM[]
     */
    function databaseListAttach(): array
    {
-      return $this->exec('SELECT [name], [file] FROM pragma_database_list WHERE [name] not in ("main","temp")', [], self::FETCH_ALL);
+      /** @var TYPE_DATABASE_LIST_ATTACH_ITEM[] $result */
+      $result = $this->exec('SELECT [name], [file] FROM pragma_database_list WHERE [name] not in ("main","temp")', [], self::FETCH_ALL);
+      return $result;
    }
 
    /**
@@ -179,8 +182,6 @@ class IPDOSQLite extends IPDO
          }
 
          return $db;
-      } elseif (!\is_string($db)) {
-         throw new \InvalidArgumentException('Database parameter must be a string or an instance of IPDOSQLite.');
       }
 
       if (\strncasecmp($db, 'file:', 5) === 0) {
@@ -210,7 +211,9 @@ class IPDOSQLite extends IPDO
     */
    function tableInfo(string $tableName): array
    {
-      return $this->exec('SELECT * FROM pragma_table_info({tbl})', ['tbl' => $tableName], self::FETCH_ALL);
+      /** @var TYPE_TABLE_INFO[] $result */
+      $result = $this->exec('SELECT * FROM pragma_table_info({tbl})', ['tbl' => $tableName], self::FETCH_ALL);
+      return $result;
    }
 
    function existsTable(string $tableName): bool
@@ -233,7 +236,9 @@ class IPDOSQLite extends IPDO
     */
    function databaseList(): array
    {
-      return $this->exec('SELECT * FROM pragma_database_list', [], self::FETCH_ALL);
+      /** @var TYPE_DB_LIST[] $result */
+      $result = $this->exec('SELECT * FROM pragma_database_list', [], self::FETCH_ALL);
+      return $result;
    }
 
    /**
@@ -251,7 +256,7 @@ class IPDOSQLite extends IPDO
     */
    function getVersion(): string
    {
-      return \strval($this->exec('SELECT sqlite_version() AS "0"', [], self::FETCH_ONCE)[0]);
+      return (string)$this->exec('SELECT sqlite_version()', [], self::FETCH_ONCE_NUM)[0];
    }
 
    /**

@@ -482,7 +482,8 @@ abstract class IPDO
             } elseif (null === $val) {
                 $stm->bindParam($mask, $val, PDO::PARAM_NULL);
             } else {
-                $val = \strval($val);
+                /** @var float $val */
+                $val = (string)$val;
                 $stm->bindParam($mask, $val, PDO::PARAM_STR);
             }
         }
