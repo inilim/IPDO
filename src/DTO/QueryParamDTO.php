@@ -35,6 +35,22 @@ final class QueryParamDTO
         array $values
     ) {
         $this->query = $query;
+        // FIX: комментарий "--" строчный. Имена плейсхолдеров ищем на
+        // копии запроса, из которой убраны строчные комментарии:
+        // строки режем по всем переносам (\r\n | \n | \r),
+        // в каждой строке отбрасываем "--" и всё, что после него.
+        // {name} внутри "--" комментария параметром больше не считается.
+        $lines = \preg_split('~\r\n|\r|\n~', $query) ?? [];
+        foreach ($lines as &$line) {
+            $pos = \strpos($line, '--');
+            if (false !== $pos) {
+                $line = \substr($line, 0, $pos);
+            }
+        }
+        $query = \implode("\n", $lines);
+        unset($lines, $line, $pos);
+        // FIX END
+
         $holes = [];
         \preg_match_all(self::PATTERN, $query, $holes);
         $holes = $holes[1];
