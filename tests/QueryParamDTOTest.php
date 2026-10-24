@@ -485,4 +485,109 @@ final class QueryParamDTOTest extends TestCase
 
         new QueryParamDTO('{ITEM}', ['item' => 1]);
     }
+
+    // ============================================================
+    // FIX: плейсхолдеры внутри строчных комментариев "--"
+    // ============================================================
+
+    /**
+     * Плейсхолдер внутри строчного комментария "--" не считается параметром:
+     * параметр для него передавать не нужно, а сам комментарий остаётся в запросе.
+     */
+    public function testPlaceholderInsideLineCommentIsIgnored(): void
+    {
+        $query = 'SELECT id FROM shards
+WHERE id = {id}
+    AND active = 1
+    -- AND owner_token = {token}
+    AND updated_at > {threshold}';
+
+        $dto = new QueryParamDTO($query, [
+            'id'     => 5,
+            'threshold' => 100,
+        ]);
+
+        $this->assertStringContainsString('-- AND owner_token = {token}', $dto->query);
+        $this->assertStringNotContainsString('{id}', $dto->query);
+        $this->assertStringNotContainsString('{threshold}', $dto->query);
+        $this->assertCount(2, $dto->values);
+    }
+
+    /**
+     * Комментарий, занимающий целую строку, тоже игнорируется.
+     */
+    public function testPlaceholderInsideCommentOnWholeLineIsIgnored(): void
+    {
+        $dto = new QueryParamDTO("-- {token}\nSELECT {b} FROM t", ['b' => 2]);
+
+        $this->assertStringContainsString('-- {token}', $dto->query);
+        $this->assertStringNotContainsString('{b}', $dto->query);
+        $this->assertCount(1, $dto->values);
+    }
+
+    /**
+     * Комментарий в середине строки: всё, что после "--", в детекции не участвует.
+     */
+    public function testPlaceholderAfterCommentOnSameLineIsIgnored(): void
+    {
+        $dto = new QueryParamDTO('SELECT {a}, 1 -- {token}', ['a' => 1]);
+
+        $this->assertStringContainsString('-- {token}', $dto->query);
+        $this->assertStringNotContainsString('{a}', $dto->query);
+        $this->assertCount(1, $dto->values);
+    }
+
+    /**
+     * Переносы строк любого вида (\r\n, \n, \r) обрабатываются одинаково.
+     */
+    public function testLineCommentIgnoredWithAnyLineEndings(): void
+    {
+        foreach (["\r\n", "\n", "\r"] as $eol) {
+            $dto = new QueryParamDTO('SELECT {a}' . $eol . '-- {token}' . $eol . 'WHERE {b} = 1', [
+                'a' => 1,
+                'b' => 2,
+            ]);
+
+            $this->assertStringContainsString('-- {token}', $dto->query);
+            $this->assertStringNotContainsString('{a}', $dto->query);
+            $this->assertStringNotContainsString('{b}', $dto->query);
+            $this->assertCount(2, $dto->values, $eol);
+        }
+    }
+
+    /**
+     * Если параметр передан только для плейсхолдера, который живёт внутри
+     * комментария, — это лишний параметр: плейсхолдером он не является.
+     */
+    public function testValueForCommentedPlaceholderThrows(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessageMatches('#^IPDO\:#');
+
+        new QueryParamDTO('SELECT 1 -- {a}', ['a' => 1]);
+    }
+
+    /**
+     * "--" как часть скалярного значения внутри строкового литерала
+     * ('--', 'a--b'): строка режется по "--" ещё на этапе детекции,
+     * плейсхолдеры после него в этой строке теряются. Случай пока
+     * не обработан, поэтому библиотека падает с ошибкой — тест это
+     * фиксирует (правильная обработка требует учёта кавычек).
+     */
+    public function testDashDashInsideScalarThrows(): void
+    {
+        $queries = [
+            "SELECT '--', {c}",
+            "SELECT 'a--b', {c}",
+        ];
+
+        foreach ($queries as $query) {
+            try {
+                new QueryParamDTO($query, ['c' => 1]);
+                $this->fail('Ожидалось исключение для запроса: ' . $query);
+            } catch (\InvalidArgumentException $e) {
+                $this->assertStringStartsWith('IPDO:', $e->getMessage());
+            }
+        }
+    }
 }
