@@ -40,7 +40,8 @@ final class QueryParamDTO
         // строки режем по всем переносам (\r\n | \n | \r),
         // в каждой строке отбрасываем "--" и всё, что после него.
         // {name} внутри "--" комментария параметром больше не считается.
-        $lines = \preg_split('~\r\n|\r|\n~', $query) ?? [];
+        $lines = \preg_split('/\r\n|\r|\n/', $query);
+        /** @var string[] $lines */
         foreach ($lines as &$line) {
             $pos = \strpos($line, '--');
             if (false !== $pos) {
@@ -49,6 +50,7 @@ final class QueryParamDTO
         }
         $query = \implode("\n", $lines);
         unset($lines, $line, $pos);
+        // TODO Учитывать скалярные строки "--" '--'
         // FIX END
 
         $holes = [];
