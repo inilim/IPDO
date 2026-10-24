@@ -482,7 +482,7 @@ abstract class IPDO
             } elseif (null === $val) {
                 $stm->bindParam($mask, $val, PDO::PARAM_NULL);
             } else {
-                /** @var float $val */
+                // @phpstan-ignore-next-line до else доходят только float (gettype() вернёт 'double'); PHPStan не сужает ref-переменную по $type из gettype()
                 $val = (string)$val;
                 $stm->bindParam($mask, $val, PDO::PARAM_STR);
             }
