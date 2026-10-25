@@ -11,21 +11,43 @@ use Inilim\IPDO\Exception\IPDOException;
 
 class IPDOMySQL extends IPDO
 {
+   protected string $host;
+   protected string $login;
+   /**
+    * @var string|\SensitiveParameterValue
+    */
+   protected $password;
+
    /**
     * @param array<int|string,mixed> $options
     */
    function __construct(
       string $nameDB,
       string $login,
+      #[\SensitiveParameter]
       string $password,
       string $host = 'localhost',
       array $options = []
    ) {
       $this->nameDB   = $nameDB;
       $this->login    = $login;
-      $this->password = $password;
+      $this->password = \PHP_VERSION_ID >= 80200 ? new \SensitiveParameterValue($password) : $password;
       $this->host     = $host;
       $this->options  = $options;
+   }
+
+   function __debugInfo(): array
+   {
+      $props = \get_object_vars($this);
+      if (\PHP_VERSION_ID < 80200) {
+         unset($props['password']);
+      }
+      return $props;
+   }
+
+   protected function getPassword(): string
+   {
+      return \PHP_VERSION_ID >= 80200 ? $this->password->getValue() : $this->password;
    }
 
    /**
@@ -35,7 +57,7 @@ class IPDOMySQL extends IPDO
     */
    protected function connectDB(): void
    {
-      if ($this->connect !== null) {
+      if (null !== $this->connect) {
          return;
       }
 
@@ -53,7 +75,7 @@ class IPDOMySQL extends IPDO
             $this->host
          ),
          $this->login,
-         $this->password,
+         $this->getPassword(),
          $this->options + [
             PDO::MYSQL_ATTR_FOUND_ROWS => true,
             // PDO::ATTR_EMULATE_PREPARES => false,

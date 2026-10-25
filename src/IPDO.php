@@ -39,12 +39,8 @@ abstract class IPDO
         // 
     ;
 
-    protected const LEN_SQL = 500;
-
-    protected string $host;
     protected string $nameDB;
-    protected string $login;
-    protected string $password;
+
     /**
      * @var array<int|string,mixed>
      */
@@ -376,7 +372,7 @@ abstract class IPDO
                 throw $e;
             }
 
-            $queryParam->query = Util::strLimit($queryParam->query, self::LEN_SQL);
+            $queryParam->query = Util::strLimit($queryParam->query, 500);
 
             $errorInfo = [
                 'query_param' => (array)$queryParam,

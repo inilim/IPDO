@@ -7,9 +7,9 @@ namespace Inilim\IPDO\Exception;
 class IPDOException extends \Exception
 {
     /**
-     * @var mixed[]
+     * @var array<string|int,mixed>
      */
-    protected $errorInfo = [];
+    protected array $errorInfo = [];
 
     /**
      * @param mixed $errorInfo
@@ -17,7 +17,7 @@ class IPDOException extends \Exception
     function __construct($errorInfo, int $code = 0, ?\Throwable $previous = null)
     {
         $this->errorInfo = (\is_array($errorInfo) ? $errorInfo : [$errorInfo]) + ['message' => ''];
-        $message = $this->errorInfo['message'];
+        $message = $this->errorInfo['message'] ?? '';
         if (!\is_string($message)) {
             $message = (\is_scalar($message) || null === $message) ? \strval($message) : '';
         }
@@ -25,9 +25,9 @@ class IPDOException extends \Exception
     }
 
     /**
-     * @return mixed[]
+     * @return array<string|int,mixed>
      */
-    public function getError()
+    public function getError(): array
     {
         return $this->errorInfo;
     }
