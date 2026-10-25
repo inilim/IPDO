@@ -22,12 +22,12 @@ use Inilim\IPDO\IPDO;
 class IPDOSQLite extends IPDO
 {
    /**
-    * @param string $pathToFile "path/to/file" OR ":memory:"
+    * @param string $db "path/to/file" OR ":memory:" OR "URI (support PHP >=8.1)"
     * @param array<int|string,mixed> $options
     */
-   function __construct(string $pathToFile, array $options = [])
+   function __construct(string $db, array $options = [])
    {
-      $this->nameDB  = $pathToFile;
+      $this->nameDB  = $db;
       $this->options = $options;
    }
 
@@ -398,9 +398,8 @@ class IPDOSQLite extends IPDO
    /**
     * @see https://www.php.net/manual/ru/pdo-sqlite.createfunction.php
     * @param callable(mixed $value,mixed ...$values):mixed $callback
-    * @return static
     */
-   function createFunction(string $function_name, callable $callback, int $num_args = -1, int $flags = 0)
+   function createFunction(string $function_name, callable $callback, int $num_args = -1, int $flags = 0): self
    {
       if (null === $this->connect) {
          $this->connectDB();
@@ -413,9 +412,8 @@ class IPDOSQLite extends IPDO
     * @see https://www.php.net/manual/ru/pdo-sqlite.createaggregate.php
     * @param callable(mixed $context,int $rownumber,mixed $value,mixed ...$values):mixed $step
     * @param callable(mixed $context,int $rownumber):mixed $finalize
-    * @return static
     */
-   function createAggregate(string $name, callable $step, callable $finalize, int $numArgs = -1)
+   function createAggregate(string $name, callable $step, callable $finalize, int $numArgs = -1): self
    {
       if (null === $this->connect) {
          $this->connectDB();
@@ -427,9 +425,8 @@ class IPDOSQLite extends IPDO
    /**
     * @see https://www.php.net/manual/ru/pdo-sqlite.createcollation.php
     * @param callable(string $string1,string $string2):int $callback
-    * @return static
     */
-   function createCollation(string $name, callable $callback)
+   function createCollation(string $name, callable $callback): self
    {
       if (null === $this->connect) {
          $this->connectDB();
@@ -493,9 +490,8 @@ class IPDOSQLite extends IPDO
    }
 
    /**
-    * @return static
     */
-   function vacuumInto(string $pathToFile)
+   function vacuumInto(string $pathToFile): self
    {
       $this->exec('VACUUM INTO {file};', [
          'file' => $pathToFile,
@@ -505,9 +501,8 @@ class IPDOSQLite extends IPDO
 
    /**
     * alias vacuumInto()
-    * @return static
     */
-   function backupToFile(string $pathToFile)
+   function backupToFile(string $pathToFile): self
    {
       return $this->vacuumInto($pathToFile);
    }
