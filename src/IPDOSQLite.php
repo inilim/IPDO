@@ -31,6 +31,142 @@ class IPDOSQLite extends IPDO
       $this->options = $options;
    }
 
+   // PRAGMA GET SET START
+
+   /**
+    * @param int<0,2_147_483_647> $milliseconds
+    * @throws \InvalidArgumentException
+    */
+   function setBusyTimeout(int $milliseconds): self
+   {
+      if ($milliseconds < 0) {
+         throw new \InvalidArgumentException(
+            \sprintf('Busy timeout cannot be negative, %d given.', $milliseconds)
+         );
+      }
+      if ($milliseconds > 2_147_483_647) {
+         throw new \InvalidArgumentException(
+            \sprintf('Busy timeout cannot exceed %d milliseconds, %d given.', 2_147_483_647, $milliseconds)
+         );
+      }
+      if ($this->exists('SELECT 1 FROM pragma_busy_timeout() WHERE [timeout] = {ms}', ['ms' => $milliseconds])) {
+         return $this;
+      }
+      $this->execBusyRetry(
+         // INFO конструкция "PRAGMA ..." не принимает placeholder'ы
+         \sprintf('PRAGMA busy_timeout = %s', $milliseconds),
+         [],
+         self::FETCH_VOID,
+         2
+      );
+      return $this;
+   }
+
+   /**
+    * @return int<0,2_147_483_647>
+    */
+   function getBusyTimeout(): int
+   {
+      $ms = (int)$this->exec('SELECT [timeout] FROM pragma_busy_timeout()', [], self::FETCH_ONCE_NUM)[0];
+      return $ms;
+   }
+
+   /**
+    * @param 'wal'|'delete'|'truncate'|'persist'|'memory'|'off' $mode
+    * @throws \InvalidArgumentException
+    */
+   function setJournalMode(string $mode): self
+   {
+      $mode = \strtolower($mode);
+      if (!in_array($mode, ['wal', 'delete', 'truncate', 'persist', 'memory', 'off'], true)) {
+         throw new \InvalidArgumentException(\sprintf('Unsupported journal mode: %s', $mode));
+      }
+      if ($this->exists('SELECT 1 FROM pragma_journal_mode() WHERE journal_mode = {mode}', ['mode' => $mode])) {
+         return $this;
+      }
+      $this->execBusyRetry(
+         // INFO конструкция "PRAGMA ..." не принимает placeholder'ы
+         \sprintf('PRAGMA journal_mode = %s', \strtoupper($mode)),
+         [],
+         self::FETCH_VOID,
+         2
+      );
+      return $this;
+   }
+
+   /**
+    * @return 'wal'|'delete'|'truncate'|'persist'|'memory'|'off'
+    */
+   function getJournalMode(): string
+   {
+      $mode = (string)$this->exec('SELECT journal_mode FROM pragma_journal_mode()', [], self::FETCH_ONCE_NUM)[0];
+      return $mode;
+   }
+
+   /**
+    * Устанавливает режим синхронизации диска (PRAGMA synchronous).
+    *
+    * @param 'off'|'normal'|'full'|'extra'|'0'|'1'|'2'|'3'|0|1|2|3 $modeOrCode OFF (0) | NORMAL (1) | FULL (2) | EXTRA (3)
+    * @throws \InvalidArgumentException
+    */
+   function setSynchronous($modeOrCode): self
+   {
+      $mode = \strtolower((string)$modeOrCode);
+      if ('off' === $mode || '0' === $mode) {
+         $code = 0;
+         $mode = 'off';
+      } elseif ('normal' === $mode || '1' === $mode) {
+         $code = 1;
+         $mode = 'normal';
+      } elseif ('full' === $mode || '2' === $mode) {
+         $code = 2;
+         $mode = 'full';
+      } elseif ('extra' === $mode || '3' === $mode) {
+         $code = 3;
+         $mode = 'extra';
+      } else {
+         throw new \InvalidArgumentException(\sprintf('Unsupported synchronous mode: %s', $modeOrCode));
+      }
+
+      if ($this->exists('SELECT 1 FROM pragma_synchronous() WHERE synchronous = {code}', ['code' => $code])) {
+         return $this;
+      }
+
+      $this->execBusyRetry(
+         // INFO конструкция "PRAGMA ..." не принимает placeholder'ы
+         \sprintf('PRAGMA synchronous = %s', $mode),
+         [],
+         self::FETCH_VOID,
+         2
+      );
+
+      return $this;
+   }
+
+   /**
+    * @return 0|1|2|3
+    */
+   function getSynchronousAsCode(): int
+   {
+      $code = (int)$this->exec('SELECT synchronous FROM pragma_synchronous()', [], self::FETCH_ONCE_NUM)[0];
+      return $code;
+   }
+
+   /**
+    * @return 'off'|'normal'|'full'|'extra'
+    */
+   function getSynchronousAsMode(): string
+   {
+      return [
+         0 => 'off',
+         1 => 'normal',
+         2 => 'full',
+         3 => 'extra',
+      ][$this->getSynchronousAsCode()];
+   }
+
+   // PRAGMA GET SET END
+
    /**
     * Выполняет запрос, учитывая блокировки БД SQLite (SQLITE_BUSY / SQLITE_LOCKED),
     * повторяя попытку до {@see $attempts} раз.
