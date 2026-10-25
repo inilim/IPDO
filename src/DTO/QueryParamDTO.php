@@ -55,6 +55,9 @@ final class QueryParamDTO
         // TODO Учитывать скалярные строки "--" '--'
         // FIX END
 
+        // TODO Учитывать многострочные комментарии "/* {placeholder} */"
+        // INFO У разных движков могут быть свои комментарии, их обрабатывать не будем.
+
         $holes = [];
         \preg_match_all(self::PATTERN, $query, $holes);
         $holes = $holes[1];
