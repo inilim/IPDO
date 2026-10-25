@@ -133,9 +133,8 @@ abstract class IPDO
     }
 
     /**
-     * @return static
      */
-    function setPDO(PDO $pdo)
+    function setPDO(PDO $pdo): self
     {
         $this->connect = $pdo;
         return $this;
@@ -187,10 +186,9 @@ abstract class IPDO
 
     /**
      * init connection
-     * @return static
      * @throws \PDOException
      */
-    function connect()
+    function connect(): self
     {
         if (null === $this->connect) {
             $this->connectDB();
@@ -255,11 +253,29 @@ abstract class IPDO
     }
 
     /**
-     * @param \Closure(static):void $callable
-     * @return static
+     * @deprecated use transaction_v2()
+     * 
+     * @template V
+     * @param \Closure(static $self, V ...$args): void $callable
+     * @param V ...$args
      * @throws IPDOException|\Throwable
      */
-    function transaction(\Closure $callable)
+    function transaction(\Closure $callable, ...$args): self
+    {
+        $this->transaction_v2($callable, ...$args);
+        return $this;
+    }
+
+    /**
+     * @template V
+     * @template T
+     * 
+     * @param \Closure(static $self, V ...$args): T $callback
+     * @param V ...$args
+     * @return T
+     * @throws IPDOException|\Throwable
+     */
+    function transaction_v2(\Closure $callback, ...$args)
     {
         $this->connectDB();
         if (!$this->begin()) {
@@ -269,7 +285,7 @@ abstract class IPDO
         }
 
         try {
-            $callable($this);
+            $result = $callback($this, ...$args);
         } catch (\Throwable $e) {
             $this->rollBack();
             throw $e;
@@ -282,7 +298,7 @@ abstract class IPDO
             ]);
         }
 
-        return $this;
+        return $result;
     }
 
     function inTransaction(): bool
