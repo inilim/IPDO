@@ -568,6 +568,15 @@ class IPDOSQLite extends IPDO
    // 
    // ---------------------------------------------
 
+
+   /**
+    * @param array<int|string,mixed> $options
+    */
+   static function inMemory(array $options = []): self
+   {
+      return new self(':memory:', $options);
+   }
+
    static function extensionLoaded(): bool
    {
       return \extension_loaded('pdo_sqlite');
